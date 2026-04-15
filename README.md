@@ -99,3 +99,99 @@ Testes gerados automaticamente a partir de cards são suficientes para melhorar 
 - Relatório de execução e cobertura por rodada
 - Mecanismo de sugestão incremental de cenários não cobertos
 - Documentação de uso para replicação do experimento
+
+---
+
+## 13. Instalação e Uso
+
+### Pré-requisitos
+
+- Node.js ≥ 18
+- Uma chave de API da OpenAI
+
+### Configuração
+
+```bash
+# Clone o repositório
+git clone https://github.com/jorgelcff/Fastest-CLI.git
+cd Fastest-CLI
+
+# Instale as dependências
+npm install
+
+# Configure a chave da API
+cp .env.example .env
+# Edite .env e adicione OPENAI_API_KEY=<sua_chave>
+```
+
+### Scripts npm
+
+| Script | Descrição |
+|---|---|
+| `npm run build` | Compila o TypeScript para `dist/` |
+| `npm start` | Executa a CLI em modo desenvolvimento (ts-node) |
+| `npm test` | Roda os testes com cobertura |
+| `npm run test:watch` | Roda os testes em modo watch |
+| `npm run lint` | Verifica erros de tipos TypeScript |
+
+### Uso do comando `generate`
+
+```bash
+# Formato básico
+npx ts-node src/index.ts generate --card="<descrição>" --file="<caminho>"
+
+# Após build
+node dist/index.js generate --card="<descrição>" --file="<caminho>"
+
+# Exemplo com o arquivo demo incluído
+npm run build
+node dist/index.js generate \
+  --card="Utilitários matemáticos: add, subtract, multiply, divide, isPrime" \
+  --file="example/math.utils.ts"
+
+# Com sugestão de testes adicionais baseada em cobertura
+node dist/index.js generate \
+  --card="Utilitários matemáticos" \
+  --file="example/math.utils.ts" \
+  --suggest
+
+# Especificando modelo e diretório de saída
+node dist/index.js generate \
+  --card="Utilitários matemáticos" \
+  --file="example/math.utils.ts" \
+  --output="tests" \
+  --model="gpt-4o"
+```
+
+### Opções do comando `generate`
+
+| Opção | Obrigatória | Padrão | Descrição |
+|---|---|---|---|
+| `--card <text>` | ✅ | — | Descrição funcional do card |
+| `--file <path>` | ✅ | — | Caminho para o arquivo fonte |
+| `--output <dir>` | ❌ | `tests` | Diretório de saída dos testes |
+| `--model <model>` | ❌ | `gpt-4o-mini` | Modelo OpenAI a utilizar |
+| `--suggest` | ❌ | `false` | Sugere testes adicionais com base na cobertura |
+
+### Estrutura do projeto
+
+```
+/fastest-cli
+  /src
+    /cli
+      generate.command.ts   # Definição do comando CLI
+    /services
+      llm.service.ts        # Integração com a OpenAI API
+      test-generator.service.ts  # Orquestração da geração de testes
+      coverage.service.ts   # Execução do Jest e leitura de cobertura
+    /utils
+      file.utils.ts         # Leitura/escrita de arquivos
+    index.ts                # Entry point da CLI
+  /tests                    # Testes gerados e testes do próprio projeto
+  /example
+    math.utils.ts           # Arquivo de exemplo para demonstração
+  jest.config.js
+  tsconfig.json
+  tsconfig.test.json
+  .env.example
+```
