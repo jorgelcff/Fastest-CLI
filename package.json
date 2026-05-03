@@ -1,0 +1,56 @@
+{
+  "name": "fastest-cli",
+  "version": "1.0.0",
+  "description": "Pipeline Inteligente de Geração de Testes a partir de Cards",
+  "main": "dist/index.js",
+  "bin": {
+    "fastest": "./dist/index.js"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "prepare": "npm run build",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "start": "ts-node src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist/",
+    "example/",
+    "scripts/setup.js",
+    ".env.example"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jorgelcff/Fastest-CLI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jorgelcff/Fastest-CLI/issues"
+  },
+  "homepage": "https://github.com/jorgelcff/Fastest-CLI#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.3",
+    "dotenv": "^17.4.2",
+    "openai": "^6.34.0",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.6.0",
+    "@types/ora": "^3.1.0",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
+}

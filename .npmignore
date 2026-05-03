@@ -1,0 +1,18 @@
+# Source and config — not needed at runtime
+src/
+tests/
+docs/
+coverage/
+.claude/
+
+# Dev config files
+tsconfig*.json
+jest.config.js
+*.map
+
+# Local env
+.env
+.env.local
+
+# Misc
+*.log
