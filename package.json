@@ -8,6 +8,7 @@
   },
   "scripts": {
     "setup": "node scripts/setup.js",
+    "prepare": "npm run build",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "start": "ts-node src/index.ts",
@@ -17,6 +18,12 @@
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist/",
+    "example/",
+    "scripts/setup.js",
+    ".env.example"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jorgelcff/Fastest-CLI.git"

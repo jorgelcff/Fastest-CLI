@@ -111,7 +111,66 @@ Testes gerados automaticamente a partir de cards são suficientes para melhorar 
 
 ---
 
-### Quick Start (3 comandos)
+### Instalação global (uso em qualquer projeto)
+
+Instale diretamente do GitHub — o build é feito automaticamente:
+
+```bash
+npm install -g github:jorgelcff/Fastest-CLI
+```
+
+Ou, se publicado no npm:
+
+```bash
+npm install -g fastest-cli
+```
+
+Após instalar, o comando `fastest` fica disponível globalmente. Para usar em outro projeto:
+
+```bash
+cd ~/meu-outro-projeto
+
+# Defina a chave da OpenAI (escolha uma das formas abaixo)
+# Opção A — variável de ambiente global (persiste entre projetos)
+export OPENAI_API_KEY=sk-proj-...          # Linux/macOS
+$env:OPENAI_API_KEY="sk-proj-..."          # Windows PowerShell
+
+# Opção B — arquivo .env local no projeto (recomendado)
+echo "OPENAI_API_KEY=sk-proj-..." >> .env
+
+# Valide o ambiente
+fastest doctor
+
+# Gere testes
+fastest generate \
+  --card="Como QA, quero validar as regras de negócio do serviço de pedidos" \
+  --file="src/orders/order.service.ts" \
+  --output="tests"
+```
+
+> **Windows com PowerShell restritivo:** use `fastest.cmd` no lugar de `fastest`.
+
+#### Onde a chave da API é lida
+
+O Fastest CLI procura `OPENAI_API_KEY` nesta ordem de prioridade:
+
+| Fonte | Como configurar |
+|---|---|
+| Variável de ambiente do shell | `export OPENAI_API_KEY=sk-...` no perfil do terminal |
+| Arquivo `.env` no diretório atual | Crie `.env` com `OPENAI_API_KEY=sk-...` no projeto alvo |
+| Opção `--model` não afeta a chave | A chave é sempre lida do ambiente |
+
+#### Verificando a instalação
+
+```bash
+fastest --version    # deve exibir 1.0.0
+fastest --help       # lista todos os comandos
+fastest doctor       # valida o ambiente do projeto atual
+```
+
+---
+
+### Quick Start (contribuindo ou rodando localmente)
 
 ```bash
 # 1. Clone e instale
