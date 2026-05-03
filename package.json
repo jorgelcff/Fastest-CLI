@@ -1,6 +1,6 @@
 {
   "name": "fastest-cli",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Pipeline Inteligente de Geração de Testes a partir de Cards",
   "main": "dist/index.js",
   "bin": {
