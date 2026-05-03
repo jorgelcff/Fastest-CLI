@@ -18,17 +18,41 @@ function pct(value: number): string {
   return chalk.red(`${value}%`);
 }
 
+const COLS = ['Statements', 'Branches', 'Functions', 'Lines'];
+const COL_W = 12;
+const SEP = '─'.repeat(COL_W);
+
 function renderCoverageTable(data: CoverageData): string {
-  const cols = ['Statements', 'Branches', 'Functions', 'Lines'];
   const vals = [data.statements, data.branches, data.functions, data.lines];
-  const colW = 12;
-  const sep = '─'.repeat(colW);
-  const top    = `┌${'─'.repeat(14)}┬${cols.map(() => sep).join('┬')}┐`;
-  const head   = `│ ${chalk.bold('Métrica'.padEnd(13))}│${cols.map(c => ` ${chalk.bold(c.padEnd(colW - 1))}`).join('│')}│`;
-  const div    = `├${'─'.repeat(14)}┼${cols.map(() => sep).join('┼')}┤`;
-  const row    = `│ ${'Cobertura'.padEnd(13)}│${vals.map(v => ` ${pct(v).padEnd(colW + 8)}`).join('│')}│`;
-  const bottom = `└${'─'.repeat(14)}┴${cols.map(() => sep).join('┴')}┘`;
+  const top    = `┌${'─'.repeat(14)}┬${COLS.map(() => SEP).join('┬')}┐`;
+  const head   = `│ ${chalk.bold('Métrica'.padEnd(13))}│${COLS.map(c => ` ${chalk.bold(c.padEnd(COL_W - 1))}`).join('│')}│`;
+  const div    = `├${'─'.repeat(14)}┼${COLS.map(() => SEP).join('┼')}┤`;
+  const row    = `│ ${'Cobertura'.padEnd(13)}│${vals.map(v => ` ${pct(v).padEnd(COL_W + 8)}`).join('│')}│`;
+  const bottom = `└${'─'.repeat(14)}┴${COLS.map(() => SEP).join('┴')}┘`;
   return [top, head, div, row, bottom].join('\n');
+}
+
+function renderCoverageDeltaTable(before: CoverageData, after: CoverageData): string {
+  const beforeVals = [before.statements, before.branches, before.functions, before.lines];
+  const afterVals  = [after.statements,  after.branches,  after.functions,  after.lines];
+
+  function delta(d: number): string {
+    const s = d > 0 ? `+${d}%` : `${d}%`;
+    const padded = s.padEnd(COL_W - 1);
+    if (d > 0) return chalk.green(padded);
+    if (d < 0) return chalk.red(padded);
+    return chalk.gray(padded);
+  }
+
+  const top      = `┌${'─'.repeat(14)}┬${COLS.map(() => SEP).join('┬')}┐`;
+  const head     = `│ ${chalk.bold('Cobertura'.padEnd(13))}│${COLS.map(c => ` ${chalk.bold(c.padEnd(COL_W - 1))}`).join('│')}│`;
+  const div      = `├${'─'.repeat(14)}┼${COLS.map(() => SEP).join('┼')}┤`;
+  const rowBefore = `│ ${chalk.gray('Antes'.padEnd(13))}│${beforeVals.map(v => ` ${chalk.gray(`${v}%`.padEnd(COL_W - 1))}`).join('│')}│`;
+  const rowAfter  = `│ ${'Depois'.padEnd(13)}│${afterVals.map(v => ` ${pct(v).padEnd(COL_W + 8)}`).join('│')}│`;
+  const div2     = `├${'─'.repeat(14)}┼${COLS.map(() => SEP).join('┼')}┤`;
+  const rowDelta  = `│ ${chalk.bold('Delta'.padEnd(13))}│${afterVals.map((v, i) => ` ${delta(v - beforeVals[i])}`).join('│')}│`;
+  const bottom   = `└${'─'.repeat(14)}┴${COLS.map(() => SEP).join('┴')}┘`;
+  return [top, head, div, rowBefore, rowAfter, div2, rowDelta, bottom].join('\n');
 }
 
 export function buildGenerateCommand(): Command {
@@ -141,7 +165,15 @@ export function buildGenerateCommand(): Command {
       const generator = new TestGeneratorService(llm);
       const coverage = new CoverageService(process.cwd());
 
-      // 2. Generate tests
+      // 2. Capture baseline coverage BEFORE generating new tests
+      const spinnerBaseline = ora({ text: chalk.gray('Capturando cobertura atual (baseline)…'), spinner: 'dots' }).start();
+      coverage.runWithCoverage(); // run existing tests so coverage-summary.json is fresh
+      const beforeCoverage = coverage.readCoverageForFile(opts.file) ?? { statements: 0, branches: 0, functions: 0, lines: 0 };
+      spinnerBaseline.succeed(
+        chalk.gray(`Baseline: ${beforeCoverage.statements}% stmts · ${beforeCoverage.branches}% branches · ${beforeCoverage.functions}% funcs · ${beforeCoverage.lines}% lines`),
+      );
+
+      // 3. Generate tests
       const spinnerGen = ora({
         text: chalk.gray(`Analisando ${opts.file} e chamando LLM…`),
         spinner: 'dots',
@@ -183,10 +215,11 @@ export function buildGenerateCommand(): Command {
         process.exit(1);
       }
 
-      // 3. Run tests with coverage
+      // 4. Run tests with coverage
       console.log('');
       const spinnerRun = ora({ text: chalk.gray('Executando Jest com cobertura…'), spinner: 'dots' }).start();
       const runResult = coverage.runWithCoverage();
+      const afterCoverage = coverage.readCoverageForFile(opts.file);
 
       if (runResult.success) {
         spinnerRun.succeed(chalk.green('Testes executados com sucesso!'));
@@ -194,11 +227,15 @@ export function buildGenerateCommand(): Command {
         spinnerRun.fail(chalk.red('Falha na execução dos testes.'));
       }
 
-      if (runResult.coverageData) {
-        console.log('\n' + renderCoverageTable(runResult.coverageData) + '\n');
+      console.log('');
+      if (afterCoverage) {
+        console.log(renderCoverageDeltaTable(beforeCoverage, afterCoverage));
+      } else if (runResult.coverageData) {
+        console.log(renderCoverageTable(runResult.coverageData));
       } else {
-        console.log(chalk.gray('\n' + runResult.coverageSummary + '\n'));
+        console.log(chalk.gray(runResult.coverageSummary));
       }
+      console.log('');
 
       if (!runResult.success) {
         console.log(chalk.gray('─'.repeat(60)));

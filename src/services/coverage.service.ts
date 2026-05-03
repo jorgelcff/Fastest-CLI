@@ -105,20 +105,39 @@ export class CoverageService {
   }
 
   readCoverageData(): CoverageData | undefined {
+    return this.readCoverageFromSummary('total');
+  }
+
+  /**
+   * Reads coverage for a specific source file from the Istanbul summary.
+   * Returns undefined if the file has no coverage entry (e.g. no tests ran yet).
+   * In that case the caller should treat it as 0% baseline.
+   */
+  readCoverageForFile(sourceFilePath: string): CoverageData | undefined {
+    const abs = path.resolve(sourceFilePath);
+    // coverage-summary.json keys can use forward or backslashes depending on OS
+    return (
+      this.readCoverageFromSummary(abs) ??
+      this.readCoverageFromSummary(abs.replace(/\\/g, '/')) ??
+      this.readCoverageFromSummary(abs.replace(/\//g, '\\'))
+    );
+  }
+
+  private readCoverageFromSummary(key: string): CoverageData | undefined {
     const summaryPath = path.join(this.projectRoot, 'coverage', 'coverage-summary.json');
     if (!fs.existsSync(summaryPath)) return undefined;
 
     try {
       const raw = fs.readFileSync(summaryPath, 'utf-8');
-      const json = JSON.parse(raw) as Record<string, { pct?: number }[]>;
-      const total = json['total'] as unknown as Record<string, { pct: number }>;
-      if (!total) return undefined;
+      const json = JSON.parse(raw) as Record<string, Record<string, { pct: number }>>;
+      const entry = json[key];
+      if (!entry) return undefined;
 
       return {
-        statements: total['statements']?.pct ?? 0,
-        branches: total['branches']?.pct ?? 0,
-        functions: total['functions']?.pct ?? 0,
-        lines: total['lines']?.pct ?? 0,
+        statements: entry['statements']?.pct ?? 0,
+        branches:   entry['branches']?.pct   ?? 0,
+        functions:  entry['functions']?.pct  ?? 0,
+        lines:      entry['lines']?.pct      ?? 0,
       };
     } catch {
       return undefined;
