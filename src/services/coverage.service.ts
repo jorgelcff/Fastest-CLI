@@ -6,6 +6,14 @@ export interface RunTestsResult {
   success: boolean;
   output: string;
   coverageSummary: string;
+  coverageData?: CoverageData;
+}
+
+export interface CoverageData {
+  statements: number;
+  branches: number;
+  functions: number;
+  lines: number;
 }
 
 export class CoverageService {
@@ -43,8 +51,9 @@ export class CoverageService {
     }
 
     const coverageSummary = this.readCoverageSummary();
+    const coverageData = this.readCoverageData();
 
-    return { success, output, coverageSummary };
+    return { success, output, coverageSummary, coverageData };
   }
 
   /**
@@ -75,39 +84,44 @@ export class CoverageService {
     }
 
     const coverageSummary = this.readCoverageSummary();
+    const coverageData = this.readCoverageData();
 
-    return { success, output, coverageSummary };
+    return { success, output, coverageSummary, coverageData };
   }
 
   /**
    * Reads the JSON coverage summary produced by Istanbul and formats it as a readable string.
    */
   readCoverageSummary(): string {
+    const data = this.readCoverageData();
+    if (!data) return 'Coverage summary not available.';
+    return [
+      'Coverage Summary:',
+      `  Statements : ${data.statements}%`,
+      `  Branches   : ${data.branches}%`,
+      `  Functions  : ${data.functions}%`,
+      `  Lines      : ${data.lines}%`,
+    ].join('\n');
+  }
+
+  readCoverageData(): CoverageData | undefined {
     const summaryPath = path.join(this.projectRoot, 'coverage', 'coverage-summary.json');
-    if (!fs.existsSync(summaryPath)) {
-      return 'Coverage summary not available.';
-    }
+    if (!fs.existsSync(summaryPath)) return undefined;
 
     try {
       const raw = fs.readFileSync(summaryPath, 'utf-8');
       const json = JSON.parse(raw) as Record<string, { pct?: number }[]>;
       const total = json['total'] as unknown as Record<string, { pct: number }>;
+      if (!total) return undefined;
 
-      if (!total) {
-        return 'Coverage summary not available.';
-      }
-
-      const lines = [
-        'Coverage Summary:',
-        `  Statements : ${total['statements']?.pct ?? 0}%`,
-        `  Branches   : ${total['branches']?.pct ?? 0}%`,
-        `  Functions  : ${total['functions']?.pct ?? 0}%`,
-        `  Lines      : ${total['lines']?.pct ?? 0}%`,
-      ];
-
-      return lines.join('\n');
+      return {
+        statements: total['statements']?.pct ?? 0,
+        branches: total['branches']?.pct ?? 0,
+        functions: total['functions']?.pct ?? 0,
+        lines: total['lines']?.pct ?? 0,
+      };
     } catch {
-      return 'Failed to parse coverage summary.';
+      return undefined;
     }
   }
 }

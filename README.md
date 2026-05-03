@@ -1,6 +1,6 @@
 # Fastest CLI
 
-Pipeline Inteligente de Geração de Testes a partir de Cards
+> Pipeline Inteligente de Geração de Testes a partir de Cards
 
 ## 1. Título do Projeto
 
@@ -69,10 +69,10 @@ A IA atua como núcleo da geração, análise e iteração dos testes.
 
 ## 8. Dependências Técnicas
 
-- Node.js
-- Jest
-- Istanbul (coverage)
-- API de LLM (OpenAI ou Claude)
+- Node.js >= 18
+- Jest + Istanbul (coverage)
+- API de LLM (OpenAI)
+- chalk + ora (output visual)
 
 ## 9. Hipótese Principal
 
@@ -106,7 +106,7 @@ Testes gerados automaticamente a partir de cards são suficientes para melhorar 
 
 ### Pré-requisitos
 
-- Node.js ≥ 18
+- Node.js >= 18
 - Uma chave de API da OpenAI
 
 ### Configuração
@@ -134,32 +134,114 @@ cp .env.example .env
 | `npm run test:watch` | Roda os testes em modo watch |
 | `npm run lint` | Verifica erros de tipos TypeScript |
 
-### Uso do comando `generate`
+---
+
+## 14. Demo Rápida
+
+Valide o ambiente antes de gerar testes:
 
 ```bash
-# Formato básico
-npx ts-node src/index.ts generate --card="<descrição>" --file="<caminho>"
+npm run build
+node dist/index.js doctor
+```
 
+Saída esperada:
+
+```
+⚡ Fastest CLI — Doctor
+
+Verificando: /seu/projeto
+
+  ✔ package.json presente
+  ✔ Jest configurado (script ou arquivo de config)
+  ✔ tsconfig.json presente
+  ✔ Node.js >=18 (detectado v20.x.x)
+  ✔ OPENAI_API_KEY presente no ambiente
+
+✔ Ambiente pronto para o Fastest CLI.
+```
+
+Gere testes para o serviço de pedidos incluído como exemplo:
+
+```bash
+node dist/index.js generate \
+  --card="Como QA, quero validar as regras de negócio do OrderService: criação de pedido com validação de estoque e desconto, confirmação, cancelamento e cálculo de subtotal" \
+  --file="example/order.service.ts" \
+  --output="tests" \
+  --model="gpt-4o-mini"
+```
+
+Saída esperada:
+
+```
+⚡ Fastest CLI — Pipeline Inteligente de Geração de Testes
+
+✔ Testes gerados com sucesso!
+  Arquivo  tests/order.service.spec.ts
+  Testes   18 caso(s) encontrado(s)
+
+✔ Testes executados com sucesso!
+
+┌────────────────┬────────────┬──────────────┬───────────────┬───────────┐
+│ Métrica        │ Statements │ Branches     │ Functions     │ Lines     │
+├────────────────┼────────────┼──────────────┼───────────────┼───────────┤
+│ Cobertura      │ 91%        │ 84%          │ 100%          │ 90%       │
+└────────────────┴────────────┴──────────────┴───────────────┴───────────┘
+
+⚡ Pipeline concluído.
+```
+
+Use `--dry-run` para inspecionar o prompt antes de consumir créditos da API:
+
+```bash
+node dist/index.js generate \
+  --card="Como QA, quero validar as regras de negócio do OrderService" \
+  --file="example/order.service.ts" \
+  --dry-run
+```
+
+Use `--suggest` para receber sugestões de novos testes baseadas nos gaps de cobertura:
+
+```bash
+node dist/index.js generate \
+  --card="Como QA, quero validar as regras de negócio do OrderService" \
+  --file="example/order.service.ts" \
+  --suggest
+```
+
+---
+
+## 15. Uso do comando `generate`
+
+### Formato básico
+
+```bash
 # Após build
 node dist/index.js generate --card="<descrição>" --file="<caminho>"
 
-# Exemplo com o arquivo demo incluído
-npm run build
+# Com ts-node (desenvolvimento)
+npx ts-node src/index.ts generate --card="<descrição>" --file="<caminho>"
+```
+
+### Exemplos
+
+```bash
+# Exemplo básico — arquivo de utilidades matemáticas
 node dist/index.js generate \
   --card="Utilitários matemáticos: add, subtract, multiply, divide, isPrime" \
   --file="example/math.utils.ts"
 
-# Dry-run (simula pipeline sem chamar OpenAI, sem gerar arquivo e sem rodar Jest)
+# Exemplo avançado — serviço com lógica de negócio
 node dist/index.js generate \
-  --card="Utilitários matemáticos: add, subtract, multiply, divide, isPrime" \
-  --file="example/math.utils.ts" \
-  --dry-run
+  --card="Como QA, quero validar as regras de negócio do OrderService: criação de pedido com validação de estoque e desconto, confirmação, cancelamento" \
+  --file="example/order.service.ts" \
+  --suggest
 
-# Com sugestão de testes adicionais baseada em cobertura
+# Dry-run — inspeciona sem chamar a API
 node dist/index.js generate \
   --card="Utilitários matemáticos" \
   --file="example/math.utils.ts" \
-  --suggest
+  --dry-run
 
 # Especificando modelo e diretório de saída
 node dist/index.js generate \
@@ -167,6 +249,25 @@ node dist/index.js generate \
   --file="example/math.utils.ts" \
   --output="tests" \
   --model="gpt-4o"
+
+# Incluindo contexto adicional (arquivos e pastas do sistema)
+node dist/index.js generate \
+  --card="Validar regras com contexto de domínio" \
+  --file="src/services/order.service.ts" \
+  --context "src/types" "src/config/app.config.ts" \
+  --output="tests" \
+  --dry-run
+
+# Guard rails de contexto (limites e modo estrito)
+node dist/index.js generate \
+  --card="Validar regras com contexto controlado" \
+  --file="src/services/order.service.ts" \
+  --context "src" \
+  --max-context-files 15 \
+  --max-context-chars 3000 \
+  --max-context-total-chars 20000 \
+  --strict-context \
+  --dry-run
 ```
 
 ### Opções do comando `generate`
@@ -175,52 +276,61 @@ node dist/index.js generate \
 |---|---|---|---|
 | `--card <text>` | ✅ | — | Descrição funcional do card |
 | `--file <path>` | ✅ | — | Caminho para o arquivo fonte |
+| `--context <paths...>` | ❌ | — | Arquivos/pastas extras para enviar como contexto |
+| `--max-context-files <n>` | ❌ | `20` | Limite máximo de arquivos de contexto |
+| `--max-context-chars <n>` | ❌ | `4000` | Limite de caracteres por arquivo de contexto |
+| `--max-context-total-chars <n>` | ❌ | `30000` | Limite total de caracteres somando todos os contextos |
+| `--strict-context` | ❌ | `false` | Falha se houver truncamento/arquivos ignorados |
 | `--output <dir>` | ❌ | `tests` | Diretório de saída dos testes |
 | `--model <model>` | ❌ | `gpt-4o-mini` | Modelo OpenAI a utilizar |
-| `--dry-run` | ❌ | `false` | Simula o pipeline sem chamadas externas e sem escrita em disco (inclui prévia do prompt) |
+| `--dry-run` | ❌ | `false` | Simula o pipeline sem chamadas externas (inclui prévia do prompt) |
 | `--suggest` | ❌ | `false` | Sugere testes adicionais com base na cobertura |
 
-### Cenário de dry-run recomendado
+---
 
-Use este fluxo para validar parâmetros e observar a pipeline antes de executar de fato:
+## 16. Comando `doctor`
 
-1. Compile o projeto:
-
-```bash
-npm run build
-```
-
-2. Rode o dry-run com um card real:
+Use `doctor` para validar rapidamente o projeto antes de executar uma geração real:
 
 ```bash
-node dist/index.js generate \
-  --card="Como QA, quero validar operações matemáticas básicas e edge cases" \
-  --file="example/math.utils.ts" \
-  --output="tests" \
-  --model="gpt-4o-mini" \
-  --dry-run
+# Valida o diretório atual
+fastest doctor
+
+# Valida um diretório específico
+fastest doctor --cwd ../outro-projeto
+
+# Valida também os caminhos de contexto com os mesmos guard rails do generate
+fastest doctor \
+  --cwd ../outro-projeto \
+  --context "src" "docs/arquitetura.md" \
+  --max-context-files 15 \
+  --max-context-chars 3000 \
+  --max-context-total-chars 20000 \
+  --strict-context
 ```
 
-3. Verifique no output:
+### Verificações realizadas
 
-- Arquivo de entrada validado
-- Caminho planejado do arquivo de teste de saída
-- Modelo selecionado
-- Lista de etapas que seriam executadas
-- Prévia do prompt enviado ao LLM
+| Check | O que valida |
+|---|---|
+| `package.json` presente | Diretório é um projeto Node |
+| Jest configurado | `jest.config.js` ou script `test` no package.json |
+| `tsconfig.json` presente | Projeto TypeScript detectado |
+| Node.js >= 18 | Versão mínima exigida |
+| `OPENAI_API_KEY` no ambiente | Chave da API disponível |
 
-### Testar a CLI em outro projeto
+---
 
-Você pode deixar o Fastest CLI disponível globalmente para testar em qualquer repositório local.
+## 17. Testar a CLI em outro projeto
 
-1. Neste repositório (Fastest-CLI), compile e faça o link global:
+1. Neste repositório, compile e faça o link global:
 
 ```bash
 npm run build
 npm link
 ```
 
-2. No outro projeto onde você quer testar, rode:
+2. No projeto onde quer testar:
 
 ```bash
 fastest generate \
@@ -232,41 +342,58 @@ fastest generate \
 
 No Windows com política restritiva do PowerShell, use `fastest.cmd` no lugar de `fastest`.
 
-3. Quando estiver pronto para execução real, remova `--dry-run` e configure `OPENAI_API_KEY` no ambiente.
+3. Remova `--dry-run` e configure `OPENAI_API_KEY` para execução real.
 
-### Comando `doctor`
+---
 
-Use `doctor` para validar rapidamente o projeto alvo antes de executar uma geração real:
+## 18. Guard rails de contexto
 
-```bash
-# valida o diretório atual
-fastest doctor
+Por padrão, os seguintes guard rails protegem o prompt enviado ao LLM:
 
-# valida um diretório específico
-fastest doctor --cwd ../outro-projeto
+- Apenas arquivos texto conhecidos (`.ts`, `.js`, `.json`, `.md`, `.yml`, `.env`, etc.) são incluídos
+- Arquivos binários são ignorados automaticamente (detecção via byte nulo)
+- Diretórios `node_modules`, `.git`, `dist`, `coverage` são sempre ignorados
+- Limites de volume por arquivo e no total evitam prompts excessivos
+
+---
+
+## 19. Estrutura do projeto
+
 ```
-
-No Windows, caso o PowerShell bloqueie, use `fastest.cmd doctor`.
-
-### Estrutura do projeto
-
-```
-/fastest-cli
-  /src
-    /cli
-      generate.command.ts   # Definição do comando CLI
-    /services
-      llm.service.ts        # Integração com a OpenAI API
+fastest-cli/
+  src/
+    cli/
+      generate.command.ts   # Comando generate com spinner e tabela de cobertura
+      doctor.command.ts     # Comando doctor com verificações coloridas
+    services/
+      llm.service.ts        # Integração com OpenAI API
       test-generator.service.ts  # Orquestração da geração de testes
       coverage.service.ts   # Execução do Jest e leitura de cobertura
-    /utils
-      file.utils.ts         # Leitura/escrita de arquivos
+    utils/
+      file.utils.ts         # I/O de arquivos e guard rails de contexto
     index.ts                # Entry point da CLI
-  /tests                    # Testes gerados e testes do próprio projeto
-  /example
-    math.utils.ts           # Arquivo de exemplo para demonstração
+  tests/
+    math.utils.spec.ts            # Testes do exemplo (gerados pela pipeline)
+    file.utils.spec.ts            # Testes unitários de file.utils
+    llm.service.spec.ts           # Testes unitários de llm.service
+    test-generator.service.spec.ts # Testes unitários de test-generator.service
+    coverage.service.spec.ts      # Testes unitários de coverage.service
+  example/
+    math.utils.ts           # Exemplo simples (funções matemáticas)
+    order.service.ts        # Exemplo avançado (lógica de negócio com OrderService)
+  docs/
+    AI_CONTEXT.md           # Contexto estruturado para assistentes de IA
   jest.config.js
   tsconfig.json
-  tsconfig.test.json
   .env.example
+```
+
+### Cobertura de testes do próprio projeto
+
+```
+All files        | % Stmts | % Branch | % Funcs | % Lines
+-----------------|---------|----------|---------|--------
+src/services     |   94%   |   72%    |  100%   |  96%
+src/utils        |   91%   |   81%    |  100%   |  92%
+example          |  100%   |  100%    |  100%   | 100%
 ```

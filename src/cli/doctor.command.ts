@@ -1,6 +1,8 @@
 import { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
+import chalk from 'chalk';
+import { buildPromptContextFromPaths } from '../utils/file.utils';
 
 export function buildDoctorCommand(): Command {
   const cmd = new Command('doctor');
@@ -8,9 +10,22 @@ export function buildDoctorCommand(): Command {
   cmd
     .description('Validate target project environment and prerequisites for Fastest CLI')
     .option('--cwd <dir>', 'Directory of the target project', process.cwd())
-    .action((opts: { cwd: string }) => {
+    .option('--context <paths...>', 'Additional files/folders to validate with context guard rails')
+    .option('--max-context-files <n>', 'Maximum number of context files to include', (v: string) => parseInt(v, 10), 20)
+    .option('--max-context-chars <n>', 'Maximum characters per context file', (v: string) => parseInt(v, 10), 4000)
+    .option('--max-context-total-chars <n>', 'Maximum total context characters across all context files', (v: string) => parseInt(v, 10), 30000)
+    .option('--strict-context', 'Fail if any context guard rail warning is found', false)
+    .action((opts: {
+      cwd: string;
+      context?: string[];
+      maxContextFiles: number;
+      maxContextChars: number;
+      maxContextTotalChars: number;
+      strictContext: boolean;
+    }) => {
       const root = path.resolve(opts.cwd);
-      console.log('\n🔎 Fastest CLI — Environment Doctor\n');
+      console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Doctor\n'));
+      console.log(chalk.gray(`Verificando: ${root}\n`));
 
       const checks: Array<{ name: string; ok: boolean; hint?: string }> = [];
 
@@ -18,9 +33,9 @@ export function buildDoctorCommand(): Command {
       const pkgPath = path.join(root, 'package.json');
       const pkgExists = fs.existsSync(pkgPath);
       checks.push({
-        name: 'package.json present',
+        name: 'package.json presente',
         ok: pkgExists,
-        hint: pkgExists ? undefined : 'Run `npm init` or ensure package.json exists',
+        hint: 'Execute `npm init` ou garanta que package.json existe',
       });
 
       // 2. jest.config.js or jest script
@@ -33,53 +48,100 @@ export function buildDoctorCommand(): Command {
         } catch {}
       }
       checks.push({
-        name: 'Jest configured (script or config file)',
+        name: 'Jest configurado (script ou arquivo de config)',
         ok: jestConfig || hasJest,
-        hint: jestConfig || hasJest ? undefined : 'Add Jest (npm i -D jest) or a test script in package.json',
+        hint: 'Instale Jest (npm i -D jest) ou adicione um script test no package.json',
       });
 
       // 3. tsconfig.json exists (TypeScript project)
       const tsconfig = fs.existsSync(path.join(root, 'tsconfig.json'));
       checks.push({
-        name: 'tsconfig.json present',
+        name: 'tsconfig.json presente',
         ok: tsconfig,
-        hint: tsconfig ? undefined : 'If using TypeScript, add tsconfig.json (npx tsc --init)',
+        hint: 'Para TypeScript, adicione tsconfig.json (npx tsc --init)',
       });
 
-      // 4. Node version (simple check via process.version)
+      // 4. Node version
       const nodeVer = process.version.replace(/^v/, '');
       const major = parseInt(nodeVer.split('.')[0], 10) || 0;
       const nodeOk = major >= 18;
       checks.push({
-        name: `Node >=18 (detected ${process.version})`,
+        name: `Node.js >=18 ${chalk.gray(`(detectado ${process.version})`)}`,
         ok: nodeOk,
-        hint: nodeOk ? undefined : 'Upgrade Node.js to v18 or newer',
+        hint: 'Atualize o Node.js para v18 ou superior',
       });
 
-      // 5. OPENAI_API_KEY set in environment (if present use)
+      // 5. OPENAI_API_KEY
       const hasApiKey = Boolean(process.env.OPENAI_API_KEY);
       checks.push({
-        name: 'OPENAI_API_KEY present in environment',
+        name: 'OPENAI_API_KEY presente no ambiente',
         ok: hasApiKey,
-        hint: hasApiKey ? undefined : 'Set OPENAI_API_KEY in environment or .env before running real generation',
+        hint: 'Defina OPENAI_API_KEY no ambiente ou em um arquivo .env antes de executar',
       });
 
-      // Report
+      // Print checks
       let allOk = true;
       checks.forEach((c) => {
-        console.log(`${c.ok ? '✅' : '❌'} ${c.name}`);
-        if (!c.ok) {
+        if (c.ok) {
+          console.log(`  ${chalk.green('✔')} ${c.name}`);
+        } else {
           allOk = false;
-          if (c.hint) console.log(`   → ${c.hint}`);
+          console.log(`  ${chalk.red('✖')} ${c.name}`);
+          if (c.hint) console.log(`    ${chalk.gray('→')} ${chalk.gray(c.hint)}`);
         }
       });
 
-      console.log('\nSummary:');
-      if (allOk) {
-        console.log('🎉 Environment looks good for running Fastest CLI.');
+      // Context guard rails
+      let hasContextIssues = false;
+      if ((opts.context ?? []).length > 0) {
+        const context = buildPromptContextFromPaths(opts.context ?? [], {
+          baseDir: root,
+          maxFiles: opts.maxContextFiles,
+          maxCharsPerFile: opts.maxContextChars,
+          maxTotalChars: opts.maxContextTotalChars,
+        });
+
+        console.log(`\n${chalk.bold('Guard Rails de Contexto:')}`);
+        console.log(`  ${chalk.green('✔')} Arquivos incluídos : ${chalk.bold(String(context.usedFiles.length))}`);
+        console.log(`  ${chalk.gray('Caracteres totais  :')} ${context.totalCharsIncluded}`);
+
+        if (context.skippedInputs.length > 0) {
+          hasContextIssues = true;
+          console.log(`  ${chalk.yellow('⚠')} Inputs ignorados           : ${context.skippedInputs.join(', ')}`);
+        }
+        if (context.skippedByExtensionFiles.length > 0) {
+          hasContextIssues = true;
+          console.log(`  ${chalk.yellow('⚠')} Arquivos ignorados (ext)    : ${context.skippedByExtensionFiles.join(', ')}`);
+        }
+        if (context.skippedBinaryFiles.length > 0) {
+          hasContextIssues = true;
+          console.log(`  ${chalk.yellow('⚠')} Arquivos binários ignorados : ${context.skippedBinaryFiles.join(', ')}`);
+        }
+        if (context.truncatedFiles.length > 0) {
+          hasContextIssues = true;
+          console.log(`  ${chalk.yellow('⚠')} Arquivos truncados          : ${context.truncatedFiles.join(', ')}`);
+        }
+        if (context.limitedByMaxFiles) {
+          hasContextIssues = true;
+          console.log(`  ${chalk.yellow('⚠')} Limite de arquivos atingido : ${opts.maxContextFiles}`);
+        }
+        if (context.limitedByMaxTotalChars) {
+          hasContextIssues = true;
+          console.log(`  ${chalk.yellow('⚠')} Limite total de chars atingido : ${opts.maxContextTotalChars}`);
+        }
+      }
+
+      // Summary
+      console.log('');
+      if (allOk && (!opts.strictContext || !hasContextIssues)) {
+        console.log(chalk.green('✔ ') + chalk.bold('Ambiente pronto para o Fastest CLI.') + '\n');
         process.exit(0);
       } else {
-        console.log('⚠️  Some checks failed. Follow the hints above to fix the environment.');
+        if (opts.strictContext && hasContextIssues) {
+          console.log(chalk.yellow('⚠ ') + chalk.bold('Strict context: avisos de guard rail encontrados.') + '\n');
+        } else {
+          console.log(chalk.yellow('⚠ ') + chalk.bold('Algumas verificações falharam. Siga as dicas acima.') + '\n');
+        }
         process.exit(2);
       }
     });

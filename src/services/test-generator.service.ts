@@ -1,17 +1,35 @@
 import path from 'path';
 import { LLMService } from './llm.service';
-import { readFile, writeFile, getBaseName, stripCodeFences } from '../utils/file.utils';
+import {
+  readFile,
+  writeFile,
+  getBaseName,
+  stripCodeFences,
+  buildPromptContextFromPaths,
+} from '../utils/file.utils';
 
 export interface GenerateTestsOptions {
   card: string;
   filePath: string;
   outputDir?: string;
+  contextPaths?: string[];
+  maxContextFiles?: number;
+  maxContextCharsPerFile?: number;
+  maxContextTotalChars?: number;
 }
 
 export interface GenerateTestsResult {
   testFilePath: string;
   testCount: number;
   generatedCode: string;
+  usedContextFiles: string[];
+  skippedContextInputs: string[];
+  truncatedContextFiles: string[];
+  skippedByExtensionContextFiles: string[];
+  skippedBinaryContextFiles: string[];
+  limitedByMaxContextFiles: boolean;
+  limitedByMaxTotalContextChars: boolean;
+  totalContextCharsIncluded: number;
 }
 
 export class TestGeneratorService {
@@ -22,10 +40,25 @@ export class TestGeneratorService {
    * then saves the output to the tests directory.
    */
   async generate(options: GenerateTestsOptions): Promise<GenerateTestsResult> {
-    const { card, filePath, outputDir = 'tests' } = options;
+    const {
+      card,
+      filePath,
+      outputDir = 'tests',
+      contextPaths = [],
+      maxContextFiles,
+      maxContextCharsPerFile,
+      maxContextTotalChars,
+    } = options;
 
     const code = readFile(filePath);
-    const prompt = this.llm.buildTestPrompt(card, code);
+    const context = buildPromptContextFromPaths(contextPaths, {
+      baseDir: process.cwd(),
+      maxFiles: maxContextFiles,
+      maxCharsPerFile: maxContextCharsPerFile,
+      maxTotalChars: maxContextTotalChars,
+    });
+    const promptCode = context.promptContext ? `${code}\n\n${context.promptContext}` : code;
+    const prompt = this.llm.buildTestPrompt(card, promptCode);
     const rawResponse = await this.llm.complete(prompt);
     const testCode = stripCodeFences(rawResponse);
 
@@ -52,7 +85,19 @@ export class TestGeneratorService {
 
     const testCount = this.countTestCases(fixedTestCode);
 
-    return { testFilePath, testCount, generatedCode: testCode };
+    return {
+      testFilePath,
+      testCount,
+      generatedCode: testCode,
+      usedContextFiles: context.usedFiles,
+      skippedContextInputs: context.skippedInputs,
+      truncatedContextFiles: context.truncatedFiles,
+      skippedByExtensionContextFiles: context.skippedByExtensionFiles,
+      skippedBinaryContextFiles: context.skippedBinaryFiles,
+      limitedByMaxContextFiles: context.limitedByMaxFiles,
+      limitedByMaxTotalContextChars: context.limitedByMaxTotalChars,
+      totalContextCharsIncluded: context.totalCharsIncluded,
+    };
   }
 
   /**

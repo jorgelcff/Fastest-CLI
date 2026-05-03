@@ -1,12 +1,35 @@
 import { Command } from 'commander';
 import path from 'path';
 import dotenv from 'dotenv';
+import chalk from 'chalk';
+import ora from 'ora';
 import { LLMService } from '../services/llm.service';
 import { TestGeneratorService } from '../services/test-generator.service';
-import { CoverageService } from '../services/coverage.service';
-import { getBaseName, readFile } from '../utils/file.utils';
+import { CoverageService, CoverageData } from '../services/coverage.service';
+import { buildPromptContextFromPaths, getBaseName, readFile } from '../utils/file.utils';
 
 dotenv.config();
+
+const HEADER = chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Pipeline Inteligente de Geração de Testes\n');
+
+function pct(value: number): string {
+  if (value >= 80) return chalk.green(`${value}%`);
+  if (value >= 60) return chalk.yellow(`${value}%`);
+  return chalk.red(`${value}%`);
+}
+
+function renderCoverageTable(data: CoverageData): string {
+  const cols = ['Statements', 'Branches', 'Functions', 'Lines'];
+  const vals = [data.statements, data.branches, data.functions, data.lines];
+  const colW = 12;
+  const sep = '─'.repeat(colW);
+  const top    = `┌${'─'.repeat(14)}┬${cols.map(() => sep).join('┬')}┐`;
+  const head   = `│ ${chalk.bold('Métrica'.padEnd(13))}│${cols.map(c => ` ${chalk.bold(c.padEnd(colW - 1))}`).join('│')}│`;
+  const div    = `├${'─'.repeat(14)}┼${cols.map(() => sep).join('┼')}┤`;
+  const row    = `│ ${'Cobertura'.padEnd(13)}│${vals.map(v => ` ${pct(v).padEnd(colW + 8)}`).join('│')}│`;
+  const bottom = `└${'─'.repeat(14)}┴${cols.map(() => sep).join('┴')}┘`;
+  return [top, head, div, row, bottom].join('\n');
+}
 
 export function buildGenerateCommand(): Command {
   const cmd = new Command('generate');
@@ -15,52 +38,93 @@ export function buildGenerateCommand(): Command {
     .description('Generate Jest unit tests from a card description and a source file')
     .requiredOption('--card <text>', 'Card description (feature or task being tested)')
     .requiredOption('--file <path>', 'Path to the source file to generate tests for')
+    .option('--context <paths...>', 'Additional files/folders to include as system context for generation')
+    .option('--max-context-files <n>', 'Maximum number of context files to include', (v: string) => parseInt(v, 10), 20)
+    .option('--max-context-chars <n>', 'Maximum characters per context file', (v: string) => parseInt(v, 10), 4000)
+    .option('--max-context-total-chars <n>', 'Maximum total context characters across all context files', (v: string) => parseInt(v, 10), 30000)
+    .option('--strict-context', 'Fail if any context input is skipped/truncated/limited by guard rails', false)
     .option('--output <dir>', 'Output directory for the generated tests', 'tests')
     .option('--model <model>', 'OpenAI model to use (overrides OPENAI_MODEL env var)')
     .option('--dry-run', 'Simulate the full pipeline without calling LLM, writing files, or running Jest', false)
     .option('--suggest', 'After running tests, suggest additional test cases based on coverage', false)
-    .action(async (opts: { card: string; file: string; output: string; model?: string; dryRun: boolean; suggest: boolean }) => {
-      console.log('\n🚀 Fastest CLI — Test Generation Pipeline\n');
+    .action(async (opts: {
+      card: string;
+      file: string;
+      output: string;
+      model?: string;
+      context?: string[];
+      maxContextFiles: number;
+      maxContextChars: number;
+      maxContextTotalChars: number;
+      strictContext: boolean;
+      dryRun: boolean;
+      suggest: boolean;
+    }) => {
+      console.log(HEADER);
 
-      // Dry-run mode validates inputs and shows exactly what would happen next.
       if (opts.dryRun) {
-        console.log('🧪 DRY-RUN mode enabled (no external calls or file writes).\n');
+        console.log(chalk.yellow('🧪 DRY-RUN') + chalk.gray(' — nenhuma chamada externa ou escrita em disco.\n'));
         try {
           const source = readFile(opts.file);
+          const context = buildPromptContextFromPaths(opts.context ?? [], {
+            baseDir: process.cwd(),
+            maxFiles: opts.maxContextFiles,
+            maxCharsPerFile: opts.maxContextChars,
+            maxTotalChars: opts.maxContextTotalChars,
+          });
           const sourceLines = source.split(/\r?\n/).length;
           const testFilePath = path.join(opts.output, `${getBaseName(opts.file)}.spec.ts`);
           const modelName = opts.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
-          const prompt = LLMService.buildTestPrompt(opts.card, source);
+          const promptCode = context.promptContext ? `${source}\n\n${context.promptContext}` : source;
+          const prompt = LLMService.buildTestPrompt(opts.card, promptCode);
           const promptPreview = prompt.split(/\r?\n/).slice(0, 12).join('\n');
 
-          console.log(`📄 Source file validated: ${opts.file}`);
-          console.log(`   📏 Source size: ${sourceLines} line(s)`);
-          console.log(`   🧩 Card length: ${opts.card.length} character(s)`);
-          console.log(`   🤖 Model selected: ${modelName}`);
-          console.log(`   📁 Planned output file: ${testFilePath}\n`);
+          console.log(chalk.bold('Configuração:'));
+          console.log(`  ${chalk.cyan('Arquivo fonte  ')} ${opts.file} ${chalk.gray(`(${sourceLines} linhas)`)}`);
+          console.log(`  ${chalk.cyan('Card           ')} ${chalk.gray(`${opts.card.length} caracteres`)}`);
+          console.log(`  ${chalk.cyan('Modelo         ')} ${modelName}`);
+          console.log(`  ${chalk.cyan('Saída planejada')} ${testFilePath}`);
 
-          console.log('--- Planned Steps ---');
-          console.log('1) Build LLM prompt from card + source code');
-          console.log('2) Call LLM to generate Jest tests');
-          console.log('3) Save generated tests to output directory');
-          console.log('4) Run Jest with coverage and read summary');
-          if (opts.suggest) {
-            console.log('5) Generate additional test suggestions from coverage gaps');
+          if ((opts.context ?? []).length > 0) {
+            console.log(`\n${chalk.bold('Contexto:')}`);
+            console.log(`  ${chalk.green('✔')} Arquivos incluídos : ${chalk.bold(String(context.usedFiles.length))}`);
+            console.log(`  ${chalk.gray('Caracteres totais  :')} ${context.totalCharsIncluded}`);
+            if (context.skippedInputs.length > 0) {
+              console.log(`  ${chalk.yellow('⚠')} Inputs ignorados   : ${context.skippedInputs.length}`);
+            }
+            if (context.truncatedFiles.length > 0) {
+              console.log(`  ${chalk.yellow('⚠')} Arquivos truncados : ${context.truncatedFiles.length}`);
+            }
+            if (context.limitedByMaxFiles) {
+              console.log(`  ${chalk.yellow('⚠')} Limite de arquivos atingido: ${opts.maxContextFiles}`);
+            }
+
+            if (opts.strictContext && hasContextGuardRailViolations(context)) {
+              console.error(chalk.red('\n✖ Strict context: execução abortada por violações nos guard rails.'));
+              process.exit(1);
+            }
           }
-          console.log('--- End Planned Steps ---\n');
 
-          console.log(`📝 Prompt size: ${prompt.length} character(s)`);
-          console.log('--- Prompt Preview (first 12 lines) ---');
-          console.log(promptPreview);
-          if (prompt.split(/\r?\n/).length > 12) {
-            console.log('...');
-          }
-          console.log('--- End Prompt Preview ---\n');
+          console.log(`\n${chalk.bold('Etapas planejadas:')}`);
+          const steps = [
+            'Construir prompt LLM com card + código fonte',
+            'Chamar LLM para gerar testes Jest',
+            'Salvar testes no diretório de saída',
+            'Executar Jest com cobertura',
+          ];
+          if (opts.suggest) steps.push('Sugerir testes adicionais com base nos gaps de cobertura');
+          steps.forEach((s, i) => console.log(`  ${chalk.gray(`${i + 1}.`)} ${s}`));
 
-          console.log('🏁 Dry-run complete. No files were created and no tests were executed.\n');
+          console.log(`\n${chalk.bold('Prévia do prompt')} ${chalk.gray(`(${prompt.length} chars, primeiras 12 linhas):`)}`);
+          console.log(chalk.gray('─'.repeat(60)));
+          console.log(chalk.italic(promptPreview));
+          if (prompt.split(/\r?\n/).length > 12) console.log(chalk.gray('...'));
+          console.log(chalk.gray('─'.repeat(60)));
+
+          console.log(chalk.green('\n✔ Dry-run concluído. Nenhum arquivo criado.\n'));
           process.exit(0);
         } catch (err: unknown) {
-          console.error(`❌ Dry-run validation failed: ${(err as Error).message}`);
+          console.error(chalk.red(`✖ Dry-run falhou: ${(err as Error).message}`));
           process.exit(1);
         }
       }
@@ -70,7 +134,7 @@ export function buildGenerateCommand(): Command {
       try {
         llm = new LLMService({ model: opts.model });
       } catch (err: unknown) {
-        console.error(`❌ ${(err as Error).message}`);
+        console.error(chalk.red(`✖ ${(err as Error).message}`));
         process.exit(1);
       }
 
@@ -78,8 +142,10 @@ export function buildGenerateCommand(): Command {
       const coverage = new CoverageService(process.cwd());
 
       // 2. Generate tests
-      console.log(`📄 Reading source file: ${opts.file}`);
-      console.log(`🧠 Sending to LLM for test generation…`);
+      const spinnerGen = ora({
+        text: chalk.gray(`Analisando ${opts.file} e chamando LLM…`),
+        spinner: 'dots',
+      }).start();
 
       let result;
       try {
@@ -87,49 +153,116 @@ export function buildGenerateCommand(): Command {
           card: opts.card,
           filePath: opts.file,
           outputDir: opts.output,
+          contextPaths: opts.context,
+          maxContextFiles: opts.maxContextFiles,
+          maxContextCharsPerFile: opts.maxContextChars,
+          maxContextTotalChars: opts.maxContextTotalChars,
         });
+        spinnerGen.succeed(chalk.green('Testes gerados com sucesso!'));
       } catch (err: unknown) {
-        console.error(`❌ Test generation failed: ${(err as Error).message}`);
+        spinnerGen.fail(chalk.red(`Geração falhou: ${(err as Error).message}`));
         process.exit(1);
       }
 
-      console.log(`\n✅ Tests generated successfully!`);
-      console.log(`   📁 File  : ${result.testFilePath}`);
-      console.log(`   🧪 Tests : ${result.testCount} test case(s) found\n`);
+      console.log(`  ${chalk.cyan('Arquivo')} ${result.testFilePath}`);
+      console.log(`  ${chalk.cyan('Testes ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
+
+      if (result.usedContextFiles.length > 0) {
+        console.log(`  ${chalk.cyan('Contexto')} ${result.usedContextFiles.length} arquivo(s) incluído(s)`);
+      }
+      const contextWarnings: string[] = [];
+      if (result.skippedContextInputs.length > 0) contextWarnings.push(`${result.skippedContextInputs.length} input(s) ignorado(s)`);
+      if (result.truncatedContextFiles.length > 0) contextWarnings.push(`${result.truncatedContextFiles.length} arquivo(s) truncado(s)`);
+      if (result.limitedByMaxContextFiles) contextWarnings.push(`limite de arquivos (${opts.maxContextFiles}) atingido`);
+      if (contextWarnings.length > 0) {
+        console.log(`  ${chalk.yellow('⚠')} Contexto: ${contextWarnings.join(' · ')}`);
+      }
+
+      if (opts.strictContext && hasGenerationContextViolations(result)) {
+        console.error(chalk.red('\n✖ Strict context: execução abortada por violações nos guard rails.'));
+        process.exit(1);
+      }
 
       // 3. Run tests with coverage
-      console.log('▶  Running tests with coverage…\n');
+      console.log('');
+      const spinnerRun = ora({ text: chalk.gray('Executando Jest com cobertura…'), spinner: 'dots' }).start();
       const runResult = coverage.runWithCoverage();
 
-      const statusIcon = runResult.success ? '✅' : '❌';
-      console.log(`${statusIcon} Test execution ${runResult.success ? 'passed' : 'failed'}\n`);
-      console.log('--- Jest Output ---');
-      console.log(runResult.output);
-      console.log('--- End Jest Output ---\n');
-      console.log(runResult.coverageSummary);
+      if (runResult.success) {
+        spinnerRun.succeed(chalk.green('Testes executados com sucesso!'));
+      } else {
+        spinnerRun.fail(chalk.red('Falha na execução dos testes.'));
+      }
+
+      if (runResult.coverageData) {
+        console.log('\n' + renderCoverageTable(runResult.coverageData) + '\n');
+      } else {
+        console.log(chalk.gray('\n' + runResult.coverageSummary + '\n'));
+      }
+
+      if (!runResult.success) {
+        console.log(chalk.gray('─'.repeat(60)));
+        console.log(chalk.bold('Saída do Jest:'));
+        console.log(chalk.gray(runResult.output));
+        console.log(chalk.gray('─'.repeat(60)));
+      }
 
       // 4. Optionally suggest additional tests
       if (opts.suggest) {
-        console.log('\n💡 Analysing coverage gaps and suggesting new test cases…\n');
+        const spinnerSug = ora({ text: chalk.gray('Analisando gaps de cobertura…'), spinner: 'dots' }).start();
         try {
           const code = readFile(opts.file);
-          const suggestionPrompt = llm.buildCoverageSuggestionPrompt(
-            opts.card,
-            code,
-            runResult.coverageSummary,
-          );
+          const suggestionPrompt = llm.buildCoverageSuggestionPrompt(opts.card, code, runResult.coverageSummary);
           const suggestions = await llm.complete(suggestionPrompt);
-          console.log('--- Suggested Additional Tests ---');
+          spinnerSug.succeed(chalk.green('Sugestões geradas!'));
+          console.log(chalk.gray('─'.repeat(60)));
+          console.log(chalk.bold('\nTestes adicionais sugeridos:'));
           console.log(suggestions);
-          console.log('--- End Suggestions ---\n');
+          console.log(chalk.gray('─'.repeat(60)));
         } catch (err: unknown) {
-          console.error(`⚠  Could not generate suggestions: ${(err as Error).message}`);
+          spinnerSug.warn(chalk.yellow(`Não foi possível gerar sugestões: ${(err as Error).message}`));
         }
       }
 
-      console.log('\n🏁 Pipeline complete.\n');
+      console.log(chalk.bold.cyan('\n⚡ Pipeline concluído.\n'));
       process.exit(runResult.success ? 0 : 1);
     });
 
   return cmd;
+}
+
+function hasContextGuardRailViolations(context: {
+  skippedInputs: string[];
+  skippedByExtensionFiles: string[];
+  skippedBinaryFiles: string[];
+  truncatedFiles: string[];
+  limitedByMaxFiles: boolean;
+  limitedByMaxTotalChars: boolean;
+}): boolean {
+  return (
+    context.skippedInputs.length > 0 ||
+    context.skippedByExtensionFiles.length > 0 ||
+    context.skippedBinaryFiles.length > 0 ||
+    context.truncatedFiles.length > 0 ||
+    context.limitedByMaxFiles ||
+    context.limitedByMaxTotalChars
+  );
+}
+
+function hasGenerationContextViolations(result: {
+  skippedContextInputs: string[];
+  skippedByExtensionContextFiles: string[];
+  skippedBinaryContextFiles: string[];
+  truncatedContextFiles: string[];
+  limitedByMaxContextFiles: boolean;
+  limitedByMaxTotalContextChars: boolean;
+}): boolean {
+  return (
+    result.skippedContextInputs.length > 0 ||
+    result.skippedByExtensionContextFiles.length > 0 ||
+    result.skippedBinaryContextFiles.length > 0 ||
+    result.truncatedContextFiles.length > 0 ||
+    result.limitedByMaxContextFiles ||
+    result.limitedByMaxTotalContextChars
+  );
 }
