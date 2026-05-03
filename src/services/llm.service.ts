@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { resolveApiKey, readConfig } from '../config/config.manager';
 
 export interface LLMServiceOptions {
   apiKey?: string;
@@ -10,14 +11,17 @@ export class LLMService {
   private model: string;
 
   constructor(options: LLMServiceOptions = {}) {
-    const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    const resolved = resolveApiKey(options.apiKey);
+    if (!resolved) {
       throw new Error(
-        'OpenAI API key is required. Set OPENAI_API_KEY in your environment or pass it as an option.',
+        'OpenAI API key is required. Configure com:\n' +
+        '  fastest config set-key        (salva globalmente)\n' +
+        '  export OPENAI_API_KEY=sk-...  (variável de ambiente)\n' +
+        '  echo OPENAI_API_KEY=sk-... >> .env  (arquivo .env local)',
       );
     }
-    this.client = new OpenAI({ apiKey });
-    this.model = options.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+    this.client = new OpenAI({ apiKey: resolved.key });
+    this.model = options.model ?? process.env.OPENAI_MODEL ?? readConfig().openaiModel ?? 'gpt-4o-mini';
   }
 
   /**

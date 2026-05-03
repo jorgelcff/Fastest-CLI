@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { buildGenerateCommand } from './cli/generate.command';
 import { buildDoctorCommand } from './cli/doctor.command';
+import { buildConfigCommand } from './cli/config.command';
 import { version } from '../package.json';
 
 const program = new Command();
@@ -15,6 +16,7 @@ program
 
 program.addCommand(buildGenerateCommand());
 program.addCommand(buildDoctorCommand());
+program.addCommand(buildConfigCommand());
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   console.error(chalk.red(`\n✖ Erro inesperado: ${(err as Error).message}\n`));

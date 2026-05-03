@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import { buildPromptContextFromPaths } from '../utils/file.utils';
+import { resolveApiKey, maskKey, getConfigPath } from '../config/config.manager';
 
 export function buildDoctorCommand(): Command {
   const cmd = new Command('doctor');
@@ -80,8 +81,7 @@ export function buildDoctorCommand(): Command {
         hint: 'Execute `npm run setup` ou copie .env.example para .env e preencha OPENAI_API_KEY',
       });
 
-      // 6. OPENAI_API_KEY set and non-placeholder
-      const hasApiKey = Boolean(process.env.OPENAI_API_KEY);
+      // 6. OPENAI_API_KEY — check all sources
       let keyIsPlaceholder = false;
       if (envExists) {
         try {
@@ -91,13 +91,22 @@ export function buildDoctorCommand(): Command {
           keyIsPlaceholder = val === 'your_openai_api_key_here' || val === '';
         } catch {}
       }
-      const apiKeyOk = hasApiKey && !keyIsPlaceholder;
+      const resolved = resolveApiKey();
+      const apiKeyOk = resolved !== null && !keyIsPlaceholder;
+      const sourceLabel: Record<string, string> = {
+        env:    '.env / variável de ambiente',
+        config: `config global (${getConfigPath()})`,
+        option: 'argumento CLI',
+      };
+      const keyName = apiKeyOk && resolved
+        ? `OPENAI_API_KEY ${chalk.gray(`[${maskKey(resolved.key)}] via ${sourceLabel[resolved.source]}`)}`
+        : 'OPENAI_API_KEY configurada';
       checks.push({
-        name: 'OPENAI_API_KEY configurada',
+        name: keyName,
         ok: apiKeyOk,
         hint: keyIsPlaceholder
-          ? 'Substitua "your_openai_api_key_here" por sua chave real em .env (https://platform.openai.com/api-keys)'
-          : 'Defina OPENAI_API_KEY no arquivo .env ou no ambiente antes de executar',
+          ? 'Substitua "your_openai_api_key_here" no arquivo .env  (https://platform.openai.com/api-keys)'
+          : 'Execute `fastest config set-key` ou defina OPENAI_API_KEY no .env / ambiente',
       });
 
       // Print checks
