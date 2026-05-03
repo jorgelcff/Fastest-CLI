@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { resolveApiKey, readConfig } from '../config/config.manager';
+import { SourceLanguage } from '../utils/file.utils';
 
 export interface LLMServiceOptions {
   apiKey?: string;
@@ -44,7 +45,12 @@ export class LLMService {
   /**
    * Builds the standard test-generation prompt from a card description and source code.
    */
-  static buildTestPrompt(card: string, code: string): string {
+  static buildTestPrompt(card: string, code: string, language: SourceLanguage = 'typescript'): string {
+    const langInstructions =
+      language === 'typescript'
+        ? 'Retorne apenas código TypeScript válido, sem explicações, sem blocos markdown.'
+        : 'Retorne apenas código JavaScript válido (CommonJS, use require()), sem explicações, sem blocos markdown.';
+
     return `Você é um especialista em testes.
 Gere testes unitários em Jest para o seguinte código:
 
@@ -59,11 +65,11 @@ Inclua:
 - edge cases
 - mocks se necessário
 
-Retorne apenas código TypeScript válido, sem explicações, sem blocos markdown.`;
+${langInstructions}`;
   }
 
-  buildTestPrompt(card: string, code: string): string {
-    return LLMService.buildTestPrompt(card, code);
+  buildTestPrompt(card: string, code: string, language: SourceLanguage = 'typescript'): string {
+    return LLMService.buildTestPrompt(card, code, language);
   }
 
   /**

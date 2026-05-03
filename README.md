@@ -2,6 +2,27 @@
 
 > Pipeline Inteligente de Geração de Testes a partir de Cards
 
+---
+
+## Instalação rápida
+
+```bash
+# Instalar globalmente (Node.js >= 18 necessário)
+npm install -g github:jorgelcff/Fastest-CLI
+
+# Configurar a chave OpenAI (uma vez)
+fastest config set-key
+
+# Usar em qualquer projeto
+fastest generate --card="Descreva o que testar" --file="src/meu-arquivo.ts"
+```
+
+Suporta **TypeScript** e **JavaScript** automaticamente — a linguagem é detectada pela extensão do arquivo.
+
+→ [Instruções completas de instalação](#13-instalação-e-uso)
+
+---
+
 ## 1. Título do Projeto
 
 Fastest CLI — Pipeline Inteligente de Geração de Testes a partir de Cards
@@ -286,20 +307,37 @@ Saída esperada:
 ```
 ⚡ Fastest CLI — Pipeline Inteligente de Geração de Testes
 
+- Capturando cobertura atual (baseline)…
+✔ Baseline: 0% stmts · 0% branches · 0% funcs · 0% lines
+
 ✔ Testes gerados com sucesso!
-  Arquivo  tests/order.service.spec.ts
-  Testes   18 caso(s) encontrado(s)
+  Arquivo    tests/order.service.spec.ts
+  Linguagem  TypeScript
+  Testes     18 caso(s) encontrado(s)
+
+✔ TypeScript válido — nenhum erro de tipo.
 
 ✔ Testes executados com sucesso!
 
 ┌────────────────┬────────────┬──────────────┬───────────────┬───────────┐
-│ Métrica        │ Statements │ Branches     │ Functions     │ Lines     │
+│ Cobertura      │ Statements │ Branches     │ Functions     │ Lines     │
 ├────────────────┼────────────┼──────────────┼───────────────┼───────────┤
-│ Cobertura      │ 91%        │ 84%          │ 100%          │ 90%       │
+│ Antes          │ 0%         │ 0%           │ 0%            │ 0%        │
+│ Depois         │ 91%        │ 84%          │ 100%          │ 90%       │
+├────────────────┼────────────┼──────────────┼───────────────┼───────────┤
+│ Delta          │ +91%       │ +84%         │ +100%         │ +90%      │
 └────────────────┴────────────┴──────────────┴───────────────┴───────────┘
 
 ⚡ Pipeline concluído.
 ```
+
+**Suporte automático a TypeScript e JavaScript:**
+
+| Arquivo fonte | Teste gerado | Prompt |
+|---|---|---|
+| `src/service.ts` | `tests/service.spec.ts` | TypeScript com tipos |
+| `src/utils.js` | `tests/utils.spec.js` | JavaScript com CommonJS |
+| `src/helper.tsx` | `tests/helper.spec.ts` | TypeScript com tipos |
 
 Use `--dry-run` para inspecionar o prompt antes de consumir créditos da API:
 

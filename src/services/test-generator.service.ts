@@ -6,6 +6,8 @@ import {
   getBaseName,
   stripCodeFences,
   buildPromptContextFromPaths,
+  detectLanguage,
+  testExtension,
 } from '../utils/file.utils';
 
 export interface GenerateTestsOptions {
@@ -22,6 +24,7 @@ export interface GenerateTestsResult {
   testFilePath: string;
   testCount: number;
   generatedCode: string;
+  language: 'typescript' | 'javascript';
   usedContextFiles: string[];
   skippedContextInputs: string[];
   truncatedContextFiles: string[];
@@ -50,6 +53,7 @@ export class TestGeneratorService {
       maxContextTotalChars,
     } = options;
 
+    const language = detectLanguage(filePath);
     const code = readFile(filePath);
     const context = buildPromptContextFromPaths(contextPaths, {
       baseDir: process.cwd(),
@@ -58,12 +62,12 @@ export class TestGeneratorService {
       maxTotalChars: maxContextTotalChars,
     });
     const promptCode = context.promptContext ? `${code}\n\n${context.promptContext}` : code;
-    const prompt = this.llm.buildTestPrompt(card, promptCode);
+    const prompt = this.llm.buildTestPrompt(card, promptCode, language);
     const rawResponse = await this.llm.complete(prompt);
     const testCode = stripCodeFences(rawResponse);
 
     const baseName = getBaseName(filePath);
-    const testFileName = `${baseName}.spec.ts`;
+    const testFileName = `${baseName}${testExtension(language)}`;
     const testFilePath = path.join(outputDir, testFileName);
 
     // Post-process generated test code to ensure import path points to the
@@ -89,6 +93,7 @@ export class TestGeneratorService {
       testFilePath,
       testCount,
       generatedCode: testCode,
+      language,
       usedContextFiles: context.usedFiles,
       skippedContextInputs: context.skippedInputs,
       truncatedContextFiles: context.truncatedFiles,

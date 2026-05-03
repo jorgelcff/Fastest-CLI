@@ -6,7 +6,7 @@ import ora from 'ora';
 import { LLMService } from '../services/llm.service';
 import { TestGeneratorService } from '../services/test-generator.service';
 import { CoverageService, CoverageData } from '../services/coverage.service';
-import { buildPromptContextFromPaths, getBaseName, readFile } from '../utils/file.utils';
+import { buildPromptContextFromPaths, getBaseName, readFile, detectLanguage, testExtension } from '../utils/file.utils';
 
 dotenv.config();
 
@@ -89,6 +89,7 @@ export function buildGenerateCommand(): Command {
       if (opts.dryRun) {
         console.log(chalk.yellow('🧪 DRY-RUN') + chalk.gray(' — nenhuma chamada externa ou escrita em disco.\n'));
         try {
+          const language = detectLanguage(opts.file);
           const source = readFile(opts.file);
           const context = buildPromptContextFromPaths(opts.context ?? [], {
             baseDir: process.cwd(),
@@ -97,14 +98,15 @@ export function buildGenerateCommand(): Command {
             maxTotalChars: opts.maxContextTotalChars,
           });
           const sourceLines = source.split(/\r?\n/).length;
-          const testFilePath = path.join(opts.output, `${getBaseName(opts.file)}.spec.ts`);
+          const testFilePath = path.join(opts.output, `${getBaseName(opts.file)}${testExtension(language)}`);
           const modelName = opts.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
           const promptCode = context.promptContext ? `${source}\n\n${context.promptContext}` : source;
-          const prompt = LLMService.buildTestPrompt(opts.card, promptCode);
+          const prompt = LLMService.buildTestPrompt(opts.card, promptCode, language);
           const promptPreview = prompt.split(/\r?\n/).slice(0, 12).join('\n');
 
           console.log(chalk.bold('Configuração:'));
           console.log(`  ${chalk.cyan('Arquivo fonte  ')} ${opts.file} ${chalk.gray(`(${sourceLines} linhas)`)}`);
+          console.log(`  ${chalk.cyan('Linguagem      ')} ${language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
           console.log(`  ${chalk.cyan('Card           ')} ${chalk.gray(`${opts.card.length} caracteres`)}`);
           console.log(`  ${chalk.cyan('Modelo         ')} ${modelName}`);
           console.log(`  ${chalk.cyan('Saída planejada')} ${testFilePath}`);
@@ -196,8 +198,9 @@ export function buildGenerateCommand(): Command {
         process.exit(1);
       }
 
-      console.log(`  ${chalk.cyan('Arquivo')} ${result.testFilePath}`);
-      console.log(`  ${chalk.cyan('Testes ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
+      console.log(`  ${chalk.cyan('Arquivo   ')} ${result.testFilePath}`);
+      console.log(`  ${chalk.cyan('Linguagem ')} ${result.language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
+      console.log(`  ${chalk.cyan('Testes    ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
 
       if (result.usedContextFiles.length > 0) {
         console.log(`  ${chalk.cyan('Contexto')} ${result.usedContextFiles.length} arquivo(s) incluído(s)`);
@@ -215,7 +218,19 @@ export function buildGenerateCommand(): Command {
         process.exit(1);
       }
 
-      // 4. Run tests with coverage
+      // 4. Validate TypeScript (only for .ts files — catches LLM hallucinations before Jest runs)
+      if (result.language === 'typescript') {
+        const spinnerValidate = ora({ text: chalk.gray('Validando TypeScript gerado…'), spinner: 'dots' }).start();
+        const validation = coverage.validateGeneratedFile(result.testFilePath);
+        if (validation.valid) {
+          spinnerValidate.succeed(chalk.green('TypeScript válido — nenhum erro de tipo.'));
+        } else {
+          spinnerValidate.warn(chalk.yellow('Avisos de TypeScript (o Jest vai tentar mesmo assim):'));
+          console.log(chalk.gray(validation.errors));
+        }
+      }
+
+      // 5. Run tests with coverage
       console.log('');
       const spinnerRun = ora({ text: chalk.gray('Executando Jest com cobertura…'), spinner: 'dots' }).start();
       const runResult = coverage.runWithCoverage();

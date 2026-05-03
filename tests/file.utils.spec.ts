@@ -7,6 +7,8 @@ import {
   getBaseName,
   stripCodeFences,
   buildPromptContextFromPaths,
+  detectLanguage,
+  testExtension,
 } from '../src/utils/file.utils';
 
 let tmpDir: string;
@@ -53,6 +55,34 @@ describe('writeFile', () => {
     writeFile(file, 'first');
     writeFile(file, 'second');
     expect(fs.readFileSync(file, 'utf-8')).toBe('second');
+  });
+});
+
+// ── detectLanguage ────────────────────────────────────────────────────────────
+
+describe('detectLanguage', () => {
+  it.each([
+    ['src/service.ts',    'typescript'],
+    ['src/component.tsx', 'typescript'],
+    ['src/module.mts',    'typescript'],
+    ['src/utils.js',      'javascript'],
+    ['src/helper.jsx',    'javascript'],
+    ['src/index.mjs',     'javascript'],
+    ['src/mod.cjs',       'javascript'],
+  ])('%s → %s', (file, expected) => {
+    expect(detectLanguage(file)).toBe(expected);
+  });
+});
+
+// ── testExtension ─────────────────────────────────────────────────────────────
+
+describe('testExtension', () => {
+  it('returns .spec.ts for typescript', () => {
+    expect(testExtension('typescript')).toBe('.spec.ts');
+  });
+
+  it('returns .spec.js for javascript', () => {
+    expect(testExtension('javascript')).toBe('.spec.js');
   });
 });
 

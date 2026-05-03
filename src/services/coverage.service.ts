@@ -9,6 +9,11 @@ export interface RunTestsResult {
   coverageData?: CoverageData;
 }
 
+export interface ValidationResult {
+  valid: boolean;
+  errors: string;
+}
+
 export interface CoverageData {
   statements: number;
   branches: number;
@@ -121,6 +126,40 @@ export class CoverageService {
       this.readCoverageFromSummary(abs.replace(/\\/g, '/')) ??
       this.readCoverageFromSummary(abs.replace(/\//g, '\\'))
     );
+  }
+
+  /**
+   * Runs tsc --noEmit to validate the generated test file compiles without errors.
+   * Only applies to TypeScript files; JavaScript files are skipped (always valid).
+   */
+  validateGeneratedFile(testFilePath: string): ValidationResult {
+    const ext = path.extname(testFilePath).toLowerCase();
+    if (ext !== '.ts' && ext !== '.tsx') {
+      return { valid: true, errors: '' };
+    }
+
+    const opts: ExecSyncOptionsWithStringEncoding = {
+      cwd: this.projectRoot,
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    };
+
+    try {
+      const tsconfigTest = path.join(this.projectRoot, 'tsconfig.test.json');
+      const tsconfig = fs.existsSync(tsconfigTest) ? 'tsconfig.test.json' : 'tsconfig.json';
+      execSync(`npx tsc --project ${tsconfig} --noEmit 2>&1`, opts);
+      return { valid: true, errors: '' };
+    } catch (err: unknown) {
+      const e = err as { stdout?: string; stderr?: string; message?: string };
+      const raw = [e.stdout, e.stderr].filter(Boolean).join('\n');
+      // Show only the lines related to our generated file to avoid noise
+      const relevant = raw
+        .split('\n')
+        .filter(l => l.includes(testFilePath) || l.match(/error TS/))
+        .slice(0, 8)
+        .join('\n');
+      return { valid: false, errors: relevant || raw.slice(0, 400) };
+    }
   }
 
   private readCoverageFromSummary(key: string): CoverageData | undefined {

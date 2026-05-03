@@ -68,6 +68,25 @@ export function getBaseName(filePath: string): string {
   return path.basename(filePath, path.extname(filePath));
 }
 
+export type SourceLanguage = 'typescript' | 'javascript';
+
+const TS_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts']);
+
+/**
+ * Detects whether a source file is TypeScript or JavaScript based on its extension.
+ */
+export function detectLanguage(filePath: string): SourceLanguage {
+  return TS_EXTENSIONS.has(path.extname(filePath).toLowerCase()) ? 'typescript' : 'javascript';
+}
+
+/**
+ * Returns the appropriate test file extension for a given source language.
+ * TypeScript → .spec.ts  |  JavaScript → .spec.js
+ */
+export function testExtension(language: SourceLanguage): string {
+  return language === 'typescript' ? '.spec.ts' : '.spec.js';
+}
+
 /**
  * Strips markdown code fences (e.g. ```typescript ... ```) from a string.
  */
