@@ -1,8 +1,10 @@
 import { Command } from 'commander';
+import path from 'path';
 import dotenv from 'dotenv';
 import { LLMService } from '../services/llm.service';
 import { TestGeneratorService } from '../services/test-generator.service';
 import { CoverageService } from '../services/coverage.service';
+import { getBaseName, readFile } from '../utils/file.utils';
 
 dotenv.config();
 
@@ -15,9 +17,53 @@ export function buildGenerateCommand(): Command {
     .requiredOption('--file <path>', 'Path to the source file to generate tests for')
     .option('--output <dir>', 'Output directory for the generated tests', 'tests')
     .option('--model <model>', 'OpenAI model to use (overrides OPENAI_MODEL env var)')
+    .option('--dry-run', 'Simulate the full pipeline without calling LLM, writing files, or running Jest', false)
     .option('--suggest', 'After running tests, suggest additional test cases based on coverage', false)
-    .action(async (opts: { card: string; file: string; output: string; model?: string; suggest: boolean }) => {
+    .action(async (opts: { card: string; file: string; output: string; model?: string; dryRun: boolean; suggest: boolean }) => {
       console.log('\n🚀 Fastest CLI — Test Generation Pipeline\n');
+
+      // Dry-run mode validates inputs and shows exactly what would happen next.
+      if (opts.dryRun) {
+        console.log('🧪 DRY-RUN mode enabled (no external calls or file writes).\n');
+        try {
+          const source = readFile(opts.file);
+          const sourceLines = source.split(/\r?\n/).length;
+          const testFilePath = path.join(opts.output, `${getBaseName(opts.file)}.spec.ts`);
+          const modelName = opts.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+          const prompt = LLMService.buildTestPrompt(opts.card, source);
+          const promptPreview = prompt.split(/\r?\n/).slice(0, 12).join('\n');
+
+          console.log(`📄 Source file validated: ${opts.file}`);
+          console.log(`   📏 Source size: ${sourceLines} line(s)`);
+          console.log(`   🧩 Card length: ${opts.card.length} character(s)`);
+          console.log(`   🤖 Model selected: ${modelName}`);
+          console.log(`   📁 Planned output file: ${testFilePath}\n`);
+
+          console.log('--- Planned Steps ---');
+          console.log('1) Build LLM prompt from card + source code');
+          console.log('2) Call LLM to generate Jest tests');
+          console.log('3) Save generated tests to output directory');
+          console.log('4) Run Jest with coverage and read summary');
+          if (opts.suggest) {
+            console.log('5) Generate additional test suggestions from coverage gaps');
+          }
+          console.log('--- End Planned Steps ---\n');
+
+          console.log(`📝 Prompt size: ${prompt.length} character(s)`);
+          console.log('--- Prompt Preview (first 12 lines) ---');
+          console.log(promptPreview);
+          if (prompt.split(/\r?\n/).length > 12) {
+            console.log('...');
+          }
+          console.log('--- End Prompt Preview ---\n');
+
+          console.log('🏁 Dry-run complete. No files were created and no tests were executed.\n');
+          process.exit(0);
+        } catch (err: unknown) {
+          console.error(`❌ Dry-run validation failed: ${(err as Error).message}`);
+          process.exit(1);
+        }
+      }
 
       // 1. Initialise services
       let llm: LLMService;
@@ -66,7 +112,6 @@ export function buildGenerateCommand(): Command {
       if (opts.suggest) {
         console.log('\n💡 Analysing coverage gaps and suggesting new test cases…\n');
         try {
-          const { readFile } = await import('../utils/file.utils');
           const code = readFile(opts.file);
           const suggestionPrompt = llm.buildCoverageSuggestionPrompt(
             opts.card,

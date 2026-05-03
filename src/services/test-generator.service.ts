@@ -33,9 +33,24 @@ export class TestGeneratorService {
     const testFileName = `${baseName}.spec.ts`;
     const testFilePath = path.join(outputDir, testFileName);
 
-    writeFile(testFilePath, testCode);
+    // Post-process generated test code to ensure import path points to the
+    // original source file (relative to the generated test file). This
+    // fixes cases where the LLM guesses a different module name or path.
+    const absSource = path.resolve(filePath);
+    const rel = path.relative(path.dirname(testFilePath), absSource);
+    let relImport = rel.replace(/\\/g, '/');
+    // remove extension
+    relImport = relImport.replace(new RegExp(`${path.extname(relImport)}$`), '');
+    if (!relImport.startsWith('.')) relImport = './' + relImport;
 
-    const testCount = this.countTestCases(testCode);
+    // Replace the first `from '\"...\"';` / `from '\'...\'`;` occurrence to point
+    // to the correct relative import. This is conservative and targets the
+    // common top-level import the LLM adds.
+    const fixedTestCode = testCode.replace(/from\s+['"][^'"]+['"]/i, `from '${relImport}'`);
+
+    writeFile(testFilePath, fixedTestCode);
+
+    const testCount = this.countTestCases(fixedTestCode);
 
     return { testFilePath, testCount, generatedCode: testCode };
   }

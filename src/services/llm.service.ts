@@ -40,7 +40,7 @@ export class LLMService {
   /**
    * Builds the standard test-generation prompt from a card description and source code.
    */
-  buildTestPrompt(card: string, code: string): string {
+  static buildTestPrompt(card: string, code: string): string {
     return `Você é um especialista em testes.
 Gere testes unitários em Jest para o seguinte código:
 
@@ -58,10 +58,14 @@ Inclua:
 Retorne apenas código TypeScript válido, sem explicações, sem blocos markdown.`;
   }
 
+  buildTestPrompt(card: string, code: string): string {
+    return LLMService.buildTestPrompt(card, code);
+  }
+
   /**
    * Builds a prompt that asks the LLM to suggest additional tests based on a coverage report.
    */
-  buildCoverageSuggestionPrompt(card: string, code: string, coverageSummary: string): string {
+  static buildCoverageSuggestionPrompt(card: string, code: string, coverageSummary: string): string {
     return `Você é um especialista em qualidade de software.
 
 Com base no seguinte relatório de cobertura de testes, sugira novos casos de teste para melhorar a cobertura.
@@ -76,5 +80,9 @@ RELATÓRIO DE COBERTURA:
 ${coverageSummary}
 
 Liste apenas os cenários de teste que ainda não estão cobertos. Seja conciso e objetivo.`;
+  }
+
+  buildCoverageSuggestionPrompt(card: string, code: string, coverageSummary: string): string {
+    return LLMService.buildCoverageSuggestionPrompt(card, code, coverageSummary);
   }
 }

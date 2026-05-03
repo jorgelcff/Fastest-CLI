@@ -149,6 +149,12 @@ node dist/index.js generate \
   --card="Utilitários matemáticos: add, subtract, multiply, divide, isPrime" \
   --file="example/math.utils.ts"
 
+# Dry-run (simula pipeline sem chamar OpenAI, sem gerar arquivo e sem rodar Jest)
+node dist/index.js generate \
+  --card="Utilitários matemáticos: add, subtract, multiply, divide, isPrime" \
+  --file="example/math.utils.ts" \
+  --dry-run
+
 # Com sugestão de testes adicionais baseada em cobertura
 node dist/index.js generate \
   --card="Utilitários matemáticos" \
@@ -171,7 +177,76 @@ node dist/index.js generate \
 | `--file <path>` | ✅ | — | Caminho para o arquivo fonte |
 | `--output <dir>` | ❌ | `tests` | Diretório de saída dos testes |
 | `--model <model>` | ❌ | `gpt-4o-mini` | Modelo OpenAI a utilizar |
+| `--dry-run` | ❌ | `false` | Simula o pipeline sem chamadas externas e sem escrita em disco (inclui prévia do prompt) |
 | `--suggest` | ❌ | `false` | Sugere testes adicionais com base na cobertura |
+
+### Cenário de dry-run recomendado
+
+Use este fluxo para validar parâmetros e observar a pipeline antes de executar de fato:
+
+1. Compile o projeto:
+
+```bash
+npm run build
+```
+
+2. Rode o dry-run com um card real:
+
+```bash
+node dist/index.js generate \
+  --card="Como QA, quero validar operações matemáticas básicas e edge cases" \
+  --file="example/math.utils.ts" \
+  --output="tests" \
+  --model="gpt-4o-mini" \
+  --dry-run
+```
+
+3. Verifique no output:
+
+- Arquivo de entrada validado
+- Caminho planejado do arquivo de teste de saída
+- Modelo selecionado
+- Lista de etapas que seriam executadas
+- Prévia do prompt enviado ao LLM
+
+### Testar a CLI em outro projeto
+
+Você pode deixar o Fastest CLI disponível globalmente para testar em qualquer repositório local.
+
+1. Neste repositório (Fastest-CLI), compile e faça o link global:
+
+```bash
+npm run build
+npm link
+```
+
+2. No outro projeto onde você quer testar, rode:
+
+```bash
+fastest generate \
+  --card="Como QA, quero validar regras de negócio críticas" \
+  --file="src/seu-arquivo.ts" \
+  --output="tests" \
+  --dry-run
+```
+
+No Windows com política restritiva do PowerShell, use `fastest.cmd` no lugar de `fastest`.
+
+3. Quando estiver pronto para execução real, remova `--dry-run` e configure `OPENAI_API_KEY` no ambiente.
+
+### Comando `doctor`
+
+Use `doctor` para validar rapidamente o projeto alvo antes de executar uma geração real:
+
+```bash
+# valida o diretório atual
+fastest doctor
+
+# valida um diretório específico
+fastest doctor --cwd ../outro-projeto
+```
+
+No Windows, caso o PowerShell bloqueie, use `fastest.cmd doctor`.
 
 ### Estrutura do projeto
 
