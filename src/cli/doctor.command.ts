@@ -71,12 +71,33 @@ export function buildDoctorCommand(): Command {
         hint: 'Atualize o Node.js para v18 ou superior',
       });
 
-      // 5. OPENAI_API_KEY
-      const hasApiKey = Boolean(process.env.OPENAI_API_KEY);
+      // 5. .env file exists
+      const envPath = path.join(root, '.env');
+      const envExists = fs.existsSync(envPath);
       checks.push({
-        name: 'OPENAI_API_KEY presente no ambiente',
-        ok: hasApiKey,
-        hint: 'Defina OPENAI_API_KEY no ambiente ou em um arquivo .env antes de executar',
+        name: '.env presente',
+        ok: envExists,
+        hint: 'Execute `npm run setup` ou copie .env.example para .env e preencha OPENAI_API_KEY',
+      });
+
+      // 6. OPENAI_API_KEY set and non-placeholder
+      const hasApiKey = Boolean(process.env.OPENAI_API_KEY);
+      let keyIsPlaceholder = false;
+      if (envExists) {
+        try {
+          const envContent = fs.readFileSync(envPath, 'utf-8');
+          const match = envContent.match(/^OPENAI_API_KEY=(.*)$/m);
+          const val = match ? match[1].trim() : '';
+          keyIsPlaceholder = val === 'your_openai_api_key_here' || val === '';
+        } catch {}
+      }
+      const apiKeyOk = hasApiKey && !keyIsPlaceholder;
+      checks.push({
+        name: 'OPENAI_API_KEY configurada',
+        ok: apiKeyOk,
+        hint: keyIsPlaceholder
+          ? 'Substitua "your_openai_api_key_here" por sua chave real em .env (https://platform.openai.com/api-keys)'
+          : 'Defina OPENAI_API_KEY no arquivo .env ou no ambiente antes de executar',
       });
 
       // Print checks

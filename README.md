@@ -106,46 +106,70 @@ Testes gerados automaticamente a partir de cards são suficientes para melhorar 
 
 ### Pré-requisitos
 
-- Node.js >= 18
-- Uma chave de API da OpenAI
-
-### Configuração
-
-```bash
-# Clone o repositório
-git clone https://github.com/jorgelcff/Fastest-CLI.git
-cd Fastest-CLI
-
-# Instale as dependências
-npm install
-
-# Configure a chave da API
-cp .env.example .env
-# Edite .env e adicione OPENAI_API_KEY=<sua_chave>
-```
-
-### Scripts npm
-
-| Script | Descrição |
-|---|---|
-| `npm run build` | Compila o TypeScript para `dist/` |
-| `npm start` | Executa a CLI em modo desenvolvimento (ts-node) |
-| `npm test` | Roda os testes com cobertura |
-| `npm run test:watch` | Roda os testes em modo watch |
-| `npm run lint` | Verifica erros de tipos TypeScript |
+- Node.js >= 18 ([download](https://nodejs.org))
+- Uma conta na OpenAI com créditos de API ([criar conta](https://platform.openai.com))
 
 ---
 
-## 14. Demo Rápida
-
-Valide o ambiente antes de gerar testes:
+### Quick Start (3 comandos)
 
 ```bash
-npm run build
+# 1. Clone e instale
+git clone https://github.com/jorgelcff/Fastest-CLI.git
+cd Fastest-CLI
+npm install
+
+# 2. Setup guiado — cria o .env, compila e valida o ambiente
+npm run setup
+
+# 3. Gere testes para o exemplo incluído
+node dist/index.js generate \
+  --card="Como QA, quero validar as regras de negócio do OrderService" \
+  --file="example/order.service.ts"
+```
+
+O `npm run setup` faz tudo automaticamente:
+- Cria o arquivo `.env` a partir do `.env.example`
+- Informa onde obter a chave da OpenAI
+- Compila o TypeScript (`npm run build`)
+- Roda `fastest doctor` para validar o ambiente
+
+---
+
+### Obtendo a chave da OpenAI
+
+1. Acesse [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Clique em **"Create new secret key"**
+3. Copie o valor e cole no arquivo `.env`:
+
+```env
+OPENAI_API_KEY=sk-proj-...sua_chave_aqui...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+> **Observação sobre custos:** O modelo padrão `gpt-4o-mini` é o mais barato da OpenAI. Uma geração típica consome menos de $0,01. Use `--dry-run` para inspecionar o prompt antes de gastar créditos.
+
+---
+
+### Erros comuns e como resolver
+
+| Erro | Causa | Solução |
+|---|---|---|
+| `✖ OpenAI API key is required` | Sem `.env` ou chave vazia | Execute `npm run setup` e preencha `OPENAI_API_KEY` |
+| `✖ File not found: ...` | Caminho do arquivo fonte errado | Verifique o `--file` passado |
+| `command not found: fastest` | Build não executado ou `npm link` não feito | Execute `npm run build` |
+| `Cannot find module 'dist/index.js'` | Build não executado | Execute `npm run build` primeiro |
+| Testes gerados não compilam | LLM gerou import incorreto | O serviço corrige o import automaticamente — reporte se persistir |
+
+---
+
+### Validando o ambiente manualmente
+
+```bash
 node dist/index.js doctor
 ```
 
-Saída esperada:
+Saída esperada (ambiente ok):
 
 ```
 ⚡ Fastest CLI — Doctor
@@ -156,10 +180,37 @@ Verificando: /seu/projeto
   ✔ Jest configurado (script ou arquivo de config)
   ✔ tsconfig.json presente
   ✔ Node.js >=18 (detectado v20.x.x)
-  ✔ OPENAI_API_KEY presente no ambiente
+  ✔ .env presente
+  ✔ OPENAI_API_KEY configurada
 
 ✔ Ambiente pronto para o Fastest CLI.
 ```
+
+Saída quando `.env` não foi configurado:
+
+```
+  ✖ .env presente
+    → Execute `npm run setup` ou copie .env.example para .env e preencha OPENAI_API_KEY
+  ✖ OPENAI_API_KEY configurada
+    → Substitua "your_openai_api_key_here" por sua chave real em .env
+```
+
+---
+
+### Scripts npm
+
+| Script | Descrição |
+|---|---|
+| `npm run setup` | **Setup inicial**: cria `.env`, compila e valida o ambiente |
+| `npm run build` | Compila o TypeScript para `dist/` |
+| `npm start` | Executa a CLI em modo desenvolvimento (ts-node) |
+| `npm test` | Roda os testes com cobertura |
+| `npm run test:watch` | Roda os testes em modo watch |
+| `npm run lint` | Verifica erros de tipos TypeScript |
+
+---
+
+## 14. Demo Rápida
 
 Gere testes para o serviço de pedidos incluído como exemplo:
 
