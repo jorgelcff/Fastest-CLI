@@ -11,17 +11,22 @@ jest.mock('../src/utils/file.utils', () => ({
   }),
 }));
 jest.mock('../src/config/config.manager', () => ({
-  resolveApiKey: jest.fn(),
-  maskKey: jest.fn((k: string) => `${k.slice(0, 4)}...`),
-  getConfigPath: jest.fn(() => '/home/user/.fastest/config.json'),
+  resolveApiKey:            jest.fn(),
+  resolveApiKeyForProvider: jest.fn(),
+  readConfig:               jest.fn(() => ({})),
+  maskKey:                  jest.fn((k: string) => `${k.slice(0, 4)}...`),
+  getConfigPath:            jest.fn(() => '/home/user/.fastest/config.json'),
+}));
+jest.mock('../src/providers/provider.factory', () => ({
+  detectProvider: jest.fn(() => 'openai'),
 }));
 
 import fs from 'fs';
 import { buildDoctorCommand } from '../src/cli/doctor.command';
-import { resolveApiKey } from '../src/config/config.manager';
+import { resolveApiKeyForProvider } from '../src/config/config.manager';
 
 const mockFs = fs as jest.Mocked<typeof fs>;
-const mockResolveApiKey = resolveApiKey as jest.MockedFunction<typeof resolveApiKey>;
+const mockResolveApiKey = resolveApiKeyForProvider as jest.MockedFunction<typeof resolveApiKeyForProvider>;
 
 // Track exit code without stopping execution (no throw — avoids Commander's own exit interception)
 let firstExitCode: number | undefined;

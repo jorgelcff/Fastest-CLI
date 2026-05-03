@@ -175,12 +175,13 @@ export function buildGenerateCommand(): Command {
         chalk.gray(`Baseline: ${beforeCoverage.statements}% stmts · ${beforeCoverage.branches}% branches · ${beforeCoverage.functions}% funcs · ${beforeCoverage.lines}% lines`),
       );
 
-      // 3. Generate tests
+      // 3. Generate tests (with streaming token counter)
       const spinnerGen = ora({
-        text: chalk.gray(`Analisando ${opts.file} e chamando LLM…`),
+        text: chalk.gray(`Conectando ao LLM (${llm.model})…`),
         spinner: 'dots',
       }).start();
 
+      let tokenCount = 0;
       let result;
       try {
         result = await generator.generate({
@@ -191,8 +192,14 @@ export function buildGenerateCommand(): Command {
           maxContextFiles: opts.maxContextFiles,
           maxContextCharsPerFile: opts.maxContextChars,
           maxContextTotalChars: opts.maxContextTotalChars,
+          onToken: () => {
+            tokenCount++;
+            spinnerGen.text = chalk.gray(`Gerando testes… `) + chalk.dim(`${tokenCount} tokens`);
+          },
         });
-        spinnerGen.succeed(chalk.green('Testes gerados com sucesso!'));
+        spinnerGen.succeed(
+          chalk.green('Testes gerados!') + chalk.gray(` (${tokenCount} tokens · ${llm.model})`),
+        );
       } catch (err: unknown) {
         spinnerGen.fail(chalk.red(`Geração falhou: ${(err as Error).message}`));
         process.exit(1);

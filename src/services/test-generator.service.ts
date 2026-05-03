@@ -18,6 +18,7 @@ export interface GenerateTestsOptions {
   maxContextFiles?: number;
   maxContextCharsPerFile?: number;
   maxContextTotalChars?: number;
+  onToken?: (token: string) => void;
 }
 
 export interface GenerateTestsResult {
@@ -51,6 +52,7 @@ export class TestGeneratorService {
       maxContextFiles,
       maxContextCharsPerFile,
       maxContextTotalChars,
+      onToken,
     } = options;
 
     const language = detectLanguage(filePath);
@@ -63,7 +65,9 @@ export class TestGeneratorService {
     });
     const promptCode = context.promptContext ? `${code}\n\n${context.promptContext}` : code;
     const prompt = this.llm.buildTestPrompt(card, promptCode, language);
-    const rawResponse = await this.llm.complete(prompt);
+    const rawResponse = onToken
+      ? await this.llm.stream(prompt, onToken)
+      : await this.llm.complete(prompt);
     const testCode = stripCodeFences(rawResponse);
 
     const baseName = getBaseName(filePath);

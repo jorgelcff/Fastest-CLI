@@ -1,11 +1,15 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import type { Provider } from '../providers/provider.interface';
 
 export interface FastestConfig {
   openaiApiKey?: string;
+  anthropicApiKey?: string;
   openaiModel?: string;
 }
+
+export type { Provider };
 
 function getConfigDir(): string {
   return process.env.FASTEST_CONFIG_DIR ?? path.join(os.homedir(), '.fastest');
@@ -41,18 +45,32 @@ export function clearConfig(): void {
   }
 }
 
-/**
- * Resolves the OpenAI API key from all available sources in priority order:
- *   1. Explicit value passed by caller (e.g. --api-key flag)
- *   2. OPENAI_API_KEY environment variable (includes values loaded from .env)
- *   3. openaiApiKey stored in ~/.fastest/config.json (or FASTEST_CONFIG_DIR)
- */
-export function resolveApiKey(explicit?: string): { key: string; source: 'option' | 'env' | 'config' } | null {
+export type KeySource = 'option' | 'env' | 'config';
+
+const ENV_KEY: Record<Provider, string> = {
+  openai:    'OPENAI_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+};
+
+const CONFIG_KEY: Record<Provider, keyof FastestConfig> = {
+  openai:    'openaiApiKey',
+  anthropic: 'anthropicApiKey',
+};
+
+export function resolveApiKeyForProvider(
+  provider: Provider,
+  explicit?: string,
+): { key: string; source: KeySource } | null {
   if (explicit) return { key: explicit, source: 'option' };
-  if (process.env.OPENAI_API_KEY) return { key: process.env.OPENAI_API_KEY, source: 'env' };
-  const stored = readConfig().openaiApiKey;
+  const envVal = process.env[ENV_KEY[provider]];
+  if (envVal) return { key: envVal, source: 'env' };
+  const stored = readConfig()[CONFIG_KEY[provider]];
   if (stored) return { key: stored, source: 'config' };
   return null;
+}
+
+export function resolveApiKey(explicit?: string): { key: string; source: KeySource } | null {
+  return resolveApiKeyForProvider('openai', explicit);
 }
 
 export function maskKey(key: string): string {

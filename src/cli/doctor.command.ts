@@ -3,7 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import { buildPromptContextFromPaths } from '../utils/file.utils';
-import { resolveApiKey, maskKey, getConfigPath } from '../config/config.manager';
+import { resolveApiKeyForProvider, maskKey, getConfigPath, readConfig } from '../config/config.manager';
+import { detectProvider } from '../providers/provider.factory';
 
 export function buildDoctorCommand(): Command {
   const cmd = new Command('doctor');
@@ -81,32 +82,36 @@ export function buildDoctorCommand(): Command {
         hint: 'Execute `npm run setup` ou copie .env.example para .env e preencha OPENAI_API_KEY',
       });
 
-      // 6. OPENAI_API_KEY — check all sources
+      // 6. API key — check for the active provider (detected from configured model)
+      const activeModel    = readConfig().openaiModel ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+      const activeProvider = detectProvider(activeModel);
+      const envVarName     = activeProvider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+
       let keyIsPlaceholder = false;
       if (envExists) {
         try {
           const envContent = fs.readFileSync(envPath, 'utf-8');
-          const match = envContent.match(/^OPENAI_API_KEY=(.*)$/m);
+          const match = envContent.match(new RegExp(`^${envVarName}=(.*)$`, 'm'));
           const val = match ? match[1].trim() : '';
           keyIsPlaceholder = val === 'your_openai_api_key_here' || val === '';
         } catch {}
       }
-      const resolved = resolveApiKey();
-      const apiKeyOk = resolved !== null && !keyIsPlaceholder;
+      const resolved   = resolveApiKeyForProvider(activeProvider);
+      const apiKeyOk   = resolved !== null && !keyIsPlaceholder;
       const sourceLabel: Record<string, string> = {
         env:    '.env / variável de ambiente',
         config: `config global (${getConfigPath()})`,
         option: 'argumento CLI',
       };
       const keyName = apiKeyOk && resolved
-        ? `OPENAI_API_KEY ${chalk.gray(`[${maskKey(resolved.key)}] via ${sourceLabel[resolved.source]}`)}`
-        : 'OPENAI_API_KEY configurada';
+        ? `${envVarName} ${chalk.gray(`[${maskKey(resolved.key)}] via ${sourceLabel[resolved.source]}`)}`
+        : `${envVarName} configurada ${chalk.gray(`(provedor: ${activeProvider})`)}`;
       checks.push({
         name: keyName,
         ok: apiKeyOk,
         hint: keyIsPlaceholder
-          ? 'Substitua "your_openai_api_key_here" no arquivo .env  (https://platform.openai.com/api-keys)'
-          : 'Execute `fastest config set-key` ou defina OPENAI_API_KEY no .env / ambiente',
+          ? `Substitua o placeholder em .env com sua chave real`
+          : `Execute \`fastest config set-key --provider ${activeProvider}\` ou defina ${envVarName} no .env`,
       });
 
       // Print checks

@@ -1,5 +1,6 @@
-import OpenAI from 'openai';
-import { resolveApiKey, readConfig } from '../config/config.manager';
+import { resolveApiKeyForProvider, readConfig } from '../config/config.manager';
+import { createProvider, detectProvider, defaultModelForProvider } from '../providers/provider.factory';
+import { LLMProvider } from '../providers/provider.interface';
 import { SourceLanguage } from '../utils/file.utils';
 
 export interface LLMServiceOptions {
@@ -8,43 +9,37 @@ export interface LLMServiceOptions {
 }
 
 export class LLMService {
-  private client: OpenAI;
-  private model: string;
+  private provider: LLMProvider;
+  readonly model: string;
 
   constructor(options: LLMServiceOptions = {}) {
-    const resolved = resolveApiKey(options.apiKey);
+    const configModel   = readConfig().openaiModel;
+    const model         = options.model ?? process.env.OPENAI_MODEL ?? configModel ?? 'gpt-4o-mini';
+    const provider      = detectProvider(model);
+    const resolved      = resolveApiKeyForProvider(provider, options.apiKey);
+
     if (!resolved) {
+      const envVar = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
       throw new Error(
-        'OpenAI API key is required. Configure com:\n' +
-        '  fastest config set-key        (salva globalmente)\n' +
-        '  export OPENAI_API_KEY=sk-...  (variável de ambiente)\n' +
-        '  echo OPENAI_API_KEY=sk-... >> .env  (arquivo .env local)',
+        `API key required for provider "${provider}". Configure with:\n` +
+        `  fastest config set-key --provider ${provider}\n` +
+        `  export ${envVar}=your-key\n` +
+        `  echo ${envVar}=your-key >> .env`,
       );
     }
-    this.client = new OpenAI({ apiKey: resolved.key });
-    this.model = options.model ?? process.env.OPENAI_MODEL ?? readConfig().openaiModel ?? 'gpt-4o-mini';
+
+    this.model    = model;
+    this.provider = createProvider(model, resolved.key);
   }
 
-  /**
-   * Sends a prompt to the LLM and returns the text response.
-   */
   async complete(prompt: string): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('LLM returned an empty response.');
-    }
-    return content;
+    return this.provider.complete(prompt);
   }
 
-  /**
-   * Builds the standard test-generation prompt from a card description and source code.
-   */
+  async stream(prompt: string, onToken: (token: string) => void): Promise<string> {
+    return this.provider.stream(prompt, onToken);
+  }
+
   static buildTestPrompt(card: string, code: string, language: SourceLanguage = 'typescript'): string {
     const langInstructions =
       language === 'typescript'
@@ -72,9 +67,6 @@ ${langInstructions}`;
     return LLMService.buildTestPrompt(card, code, language);
   }
 
-  /**
-   * Builds a prompt that asks the LLM to suggest additional tests based on a coverage report.
-   */
   static buildCoverageSuggestionPrompt(card: string, code: string, coverageSummary: string): string {
     return `Você é um especialista em qualidade de software.
 

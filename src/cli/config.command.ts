@@ -7,16 +7,25 @@ import {
   clearConfig,
   maskKey,
   getConfigPath,
-  resolveApiKey,
+  resolveApiKeyForProvider,
+  type Provider,
 } from '../config/config.manager';
+import { detectProvider } from '../providers/provider.factory';
+
+const KEY_HINTS: Record<Provider, string> = {
+  openai:    'https://platform.openai.com/api-keys',
+  anthropic: 'https://console.anthropic.com/settings/keys',
+};
+
+const CONFIG_FIELD: Record<Provider, 'openaiApiKey' | 'anthropicApiKey'> = {
+  openai:    'openaiApiKey',
+  anthropic: 'anthropicApiKey',
+};
 
 function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
+    rl.question(question, (answer) => { rl.close(); resolve(answer.trim()); });
   });
 }
 
@@ -27,14 +36,20 @@ export function buildConfigCommand(): Command {
   // ── set-key ─────────────────────────────────────────────────────────────────
   cmd
     .command('set-key')
-    .description('Save your OpenAI API key to the global config')
-    .action(async () => {
-      console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Configurar chave da API\n'));
-      console.log(chalk.gray('A chave será salva em: ') + chalk.white(getConfigPath()));
-      console.log(chalk.gray('Permissão do arquivo: 600 (somente seu usuário pode ler)\n'));
-      console.log(chalk.gray('Obtenha sua chave em: https://platform.openai.com/api-keys\n'));
+    .description('Save an API key to the global config (OpenAI or Anthropic)')
+    .option('--provider <name>', 'Provider: openai or anthropic', 'openai')
+    .action(async (opts: { provider: string }) => {
+      const provider = opts.provider as Provider;
+      if (provider !== 'openai' && provider !== 'anthropic') {
+        console.error(chalk.red(`✖ Provedor inválido: "${opts.provider}". Use openai ou anthropic.\n`));
+        process.exit(1);
+      }
 
-      const key = await prompt(chalk.cyan('Cole sua OpenAI API Key: '));
+      console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(` — Configurar chave (${provider})\n`));
+      console.log(chalk.gray('Arquivo: ') + chalk.white(getConfigPath()));
+      console.log(chalk.gray('Obtenha sua chave em: ') + chalk.white(KEY_HINTS[provider]) + '\n');
+
+      const key = await prompt(chalk.cyan(`Cole sua ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API Key: `));
 
       if (!key) {
         console.log(chalk.red('\n✖ Nenhuma chave informada. Operação cancelada.\n'));
@@ -42,23 +57,21 @@ export function buildConfigCommand(): Command {
       }
 
       if (!key.startsWith('sk-')) {
-        const proceed = await prompt(
-          chalk.yellow('⚠  A chave não começa com "sk-". Salvar mesmo assim? (s/N): '),
-        );
+        const proceed = await prompt(chalk.yellow('⚠  A chave não começa com "sk-". Salvar mesmo assim? (s/N): '));
         if (proceed.toLowerCase() !== 's') {
           console.log(chalk.gray('\nOperação cancelada.\n'));
           process.exit(0);
         }
       }
 
-      const current = readConfig();
-      writeConfig({ ...current, openaiApiKey: key });
+      writeConfig({ ...readConfig(), [CONFIG_FIELD[provider]]: key });
 
-      console.log(chalk.green('\n✔ Chave salva com sucesso!'));
-      console.log(`  ${chalk.cyan('Chave  ')} ${maskKey(key)}`);
-      console.log(`  ${chalk.cyan('Arquivo')} ${getConfigPath()}\n`);
-      console.log(chalk.gray('Para verificar: ') + chalk.white('fastest config show'));
-      console.log(chalk.gray('Para testar   : ') + chalk.white('fastest doctor\n'));
+      console.log(chalk.green('\n✔ Chave salva!'));
+      console.log(`  ${chalk.cyan('Provedor')} ${provider}`);
+      console.log(`  ${chalk.cyan('Chave   ')} ${maskKey(key)}`);
+      console.log(`  ${chalk.cyan('Arquivo ')} ${getConfigPath()}\n`);
+      console.log(chalk.gray('Verificar: ') + chalk.white('fastest config show'));
+      console.log(chalk.gray('Testar   : ') + chalk.white('fastest doctor\n'));
     });
 
   // ── show ────────────────────────────────────────────────────────────────────
@@ -67,38 +80,30 @@ export function buildConfigCommand(): Command {
     .description('Show current global configuration')
     .action(() => {
       console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Configuração atual\n'));
-
-      const config = readConfig();
-      const resolved = resolveApiKey();
+      const config  = readConfig();
+      const model   = config.openaiModel ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+      const activeProvider = detectProvider(model);
+      const resolved = resolveApiKeyForProvider(activeProvider);
 
       console.log(`${chalk.bold('Arquivo:')} ${chalk.gray(getConfigPath())}\n`);
 
-      // API key
-      if (config.openaiApiKey) {
-        console.log(`  ${chalk.green('✔')} ${chalk.cyan('API Key (global config)')} ${maskKey(config.openaiApiKey)}`);
-      } else {
-        console.log(`  ${chalk.gray('–')} ${chalk.gray('API Key (global config)')} ${chalk.gray('não configurada')}`);
+      const providers: Provider[] = ['openai', 'anthropic'];
+      for (const p of providers) {
+        const stored = config[CONFIG_FIELD[p]];
+        const envVal = process.env[p === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY'];
+        const icon = stored || envVal ? chalk.green('✔') : chalk.gray('–');
+        const display = stored ? maskKey(stored) : envVal ? `${maskKey(envVal)} ${chalk.gray('(env)')}` : chalk.gray('não configurada');
+        console.log(`  ${icon} ${chalk.cyan(p.padEnd(10))} ${display}`);
       }
 
-      if (process.env.OPENAI_API_KEY) {
-        console.log(`  ${chalk.green('✔')} ${chalk.cyan('API Key (env var)      ')} ${maskKey(process.env.OPENAI_API_KEY)}`);
-      }
-
-      // Model
-      const model = config.openaiModel ?? process.env.OPENAI_MODEL ?? chalk.gray('gpt-4o-mini (padrão)');
-      console.log(`  ${chalk.cyan('Modelo                ')} ${model}`);
-
-      // Effective key
+      console.log(`  ${chalk.cyan('Modelo    ')} ${model} ${chalk.gray(`→ ${activeProvider}`)}`);
       console.log('');
+
       if (resolved) {
-        const sourceLabel: Record<typeof resolved.source, string> = {
-          option: 'argumento CLI',
-          env:    'variável de ambiente',
-          config: 'config global (~/.fastest)',
-        };
-        console.log(`${chalk.bold('Chave ativa:')} ${maskKey(resolved.key)} ${chalk.gray(`(fonte: ${sourceLabel[resolved.source]})`)}`);
+        const src: Record<string, string> = { option: 'argumento CLI', env: 'variável de ambiente', config: 'config global' };
+        console.log(`${chalk.bold('Chave ativa:')} ${maskKey(resolved.key)} ${chalk.gray(`(${src[resolved.source]})`)} `);
       } else {
-        console.log(chalk.yellow('⚠  Nenhuma API key configurada. Execute: ') + chalk.white('fastest config set-key'));
+        console.log(chalk.yellow(`⚠  Nenhuma chave para "${activeProvider}". Execute: `) + chalk.white(`fastest config set-key --provider ${activeProvider}`));
       }
       console.log('');
     });
@@ -106,11 +111,11 @@ export function buildConfigCommand(): Command {
   // ── set-model ───────────────────────────────────────────────────────────────
   cmd
     .command('set-model <model>')
-    .description('Set default OpenAI model (e.g. gpt-4o, gpt-4o-mini)')
+    .description('Set default model (e.g. gpt-4o-mini, claude-haiku-4-5-20251001)')
     .action((model: string) => {
-      const current = readConfig();
-      writeConfig({ ...current, openaiModel: model });
-      console.log(chalk.green(`\n✔ Modelo padrão salvo: ${chalk.bold(model)}\n`));
+      writeConfig({ ...readConfig(), openaiModel: model });
+      const provider = detectProvider(model);
+      console.log(chalk.green(`\n✔ Modelo padrão: ${chalk.bold(model)} ${chalk.gray(`(${provider})`)}\n`));
     });
 
   // ── clear ───────────────────────────────────────────────────────────────────
@@ -119,21 +124,16 @@ export function buildConfigCommand(): Command {
     .description('Remove all stored configuration')
     .action(async () => {
       console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Limpar configuração\n'));
-
       const config = readConfig();
-      if (!config.openaiApiKey && !config.openaiModel) {
+      if (!config.openaiApiKey && !config.anthropicApiKey && !config.openaiModel) {
         console.log(chalk.gray('Nenhuma configuração encontrada. Nada a remover.\n'));
         process.exit(0);
       }
-
-      const confirm = await prompt(
-        chalk.yellow(`⚠  Isso removerá ${getConfigPath()}\n   Confirma? (s/N): `),
-      );
+      const confirm = await prompt(chalk.yellow(`⚠  Remove ${getConfigPath()}\n   Confirma? (s/N): `));
       if (confirm.toLowerCase() !== 's') {
         console.log(chalk.gray('\nOperação cancelada.\n'));
         process.exit(0);
       }
-
       clearConfig();
       console.log(chalk.green('\n✔ Configuração removida.\n'));
     });

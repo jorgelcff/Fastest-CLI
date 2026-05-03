@@ -35,7 +35,7 @@ describe('LLMService', () => {
 
     it('throws when API key is absent', () => {
       delete process.env.OPENAI_API_KEY;
-      expect(() => new LLMService()).toThrow('OpenAI API key is required');
+      expect(() => new LLMService()).toThrow('API key required for provider');
     });
 
     it('accepts API key via options', () => {
