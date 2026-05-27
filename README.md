@@ -64,6 +64,7 @@ Desenvolver uma pipeline com IA que execute, de forma orquestrada:
 6. Geração de código de testes E2E (Cypress)
 
 A IA atua como núcleo da geração, análise e iteração dos testes.
+O fluxo atual suporta geração unitária e de integração orientada a casos de uso.
 
 ## 6. Arquitetura Preliminar
 
@@ -433,6 +434,25 @@ node dist/index.js generate \
 | `--model <model>` | ❌ | `gpt-4o-mini` | Modelo OpenAI a utilizar |
 | `--dry-run` | ❌ | `false` | Simula o pipeline sem chamadas externas (inclui prévia do prompt) |
 | `--suggest` | ❌ | `false` | Sugere testes adicionais com base na cobertura |
+| `--test-type <unit\|integration>` | ❌ | `unit` | Define se a geração será unitária ou de integração (Jest + Supertest) |
+
+### Modo integração (casos de uso ponta a ponta)
+
+Use `--test-type integration` quando quiser priorizar fluxos completos de negócio.
+
+```bash
+node dist/index.js generate \
+  --card="Como QA, quero validar o fluxo de criação e cancelamento de pedido via API" \
+  --file="example/order.service.ts" \
+  --test-type integration \
+  --suggest
+```
+
+No modo integração, o prompt orienta a IA a:
+- gerar cenários ponta a ponta;
+- incluir falhas de comunicação/API;
+- produzir mocks determinísticos de dependências externas (`jest.mock`/`jest.spyOn`);
+- estruturar testes para execução com Jest + Supertest.
 
 ---
 

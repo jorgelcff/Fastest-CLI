@@ -21,6 +21,12 @@ export interface CoverageData {
   lines: number;
 }
 
+export interface CriticalFlowGap {
+  metric: keyof CoverageData;
+  score: number;
+  message: string;
+}
+
 export class CoverageService {
   private readonly projectRoot: string;
 
@@ -111,6 +117,42 @@ export class CoverageService {
 
   readCoverageData(): CoverageData | undefined {
     return this.readCoverageFromSummary('total');
+  }
+
+  analyzeCriticalFlowGaps(data?: CoverageData): CriticalFlowGap[] {
+    if (!data) return [];
+    const gaps: CriticalFlowGap[] = [];
+
+    if (data.branches < 70) {
+      gaps.push({
+        metric: 'branches',
+        score: data.branches,
+        message: 'Cobertura de branches baixa: faltam caminhos alternativos e erros de fluxo.',
+      });
+    }
+    if (data.statements < 75) {
+      gaps.push({
+        metric: 'statements',
+        score: data.statements,
+        message: 'Cobertura de statements baixa: passos do caso de uso não estão totalmente exercitados.',
+      });
+    }
+    if (data.lines < 75) {
+      gaps.push({
+        metric: 'lines',
+        score: data.lines,
+        message: 'Cobertura de linhas baixa: ainda há blocos importantes sem validação.',
+      });
+    }
+    if (data.functions < 80) {
+      gaps.push({
+        metric: 'functions',
+        score: data.functions,
+        message: 'Cobertura de funções baixa: componentes do fluxo de negócio não foram integrados.',
+      });
+    }
+
+    return gaps;
   }
 
   /**

@@ -73,6 +73,13 @@ describe('LLMService', () => {
       expect(prompt.toLowerCase()).toContain('edge');
     });
 
+    it('builds integration prompt with supertest guidance', () => {
+      const prompt = LLMService.buildTestPrompt('card', 'code', 'typescript', 'integration');
+      expect(prompt.toLowerCase()).toContain('supertest');
+      expect(prompt.toLowerCase()).toContain('ponta a ponta');
+      expect(prompt.toLowerCase()).toContain('jest.mock');
+    });
+
     it('instance method delegates to static', () => {
       const svc = new LLMService({ apiKey: 'k' });
       expect(svc.buildTestPrompt('c', 'code')).toBe(LLMService.buildTestPrompt('c', 'code'));
@@ -94,6 +101,12 @@ describe('LLMService', () => {
       expect(svc.buildCoverageSuggestionPrompt('c', 'code', 'cov')).toBe(
         LLMService.buildCoverageSuggestionPrompt('c', 'code', 'cov'),
       );
+    });
+
+    it('asks for critical flow gaps in integration mode', () => {
+      const prompt = LLMService.buildCoverageSuggestionPrompt('c', 'code', 'cov', 'integration');
+      expect(prompt.toLowerCase()).toContain('fluxos críticos');
+      expect(prompt.toLowerCase()).toContain('ponta a ponta');
     });
   });
 

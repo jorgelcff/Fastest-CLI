@@ -142,3 +142,20 @@ describe('doctor — process.exit contract', () => {
     expect(firstExitCode).toBeDefined();
   });
 });
+
+describe('doctor — integration prerequisites', () => {
+  it('exits with code 0 when supertest dependency exists', async () => {
+    mockFs.existsSync.mockImplementation((p) => {
+      const s = String(p);
+      return s.endsWith('package.json') || s.endsWith('jest.config.js') ||
+        s.endsWith('tsconfig.json') || s.endsWith('.env');
+    });
+    (mockFs.readFileSync as jest.Mock).mockImplementation((p: unknown) => {
+      if (String(p).endsWith('.env')) return 'OPENAI_API_KEY=sk-real-key\n';
+      return JSON.stringify({ scripts: { test: 'jest' }, devDependencies: { supertest: '^7.1.4' } });
+    });
+    mockResolveApiKey.mockReturnValue({ key: 'sk-test-key', source: 'env' });
+    await runDoctor(['--integration']);
+    expect(firstExitCode).toBe(0);
+  });
+});

@@ -1,5 +1,5 @@
 import path from 'path';
-import { LLMService } from './llm.service';
+import { LLMService, TestType } from './llm.service';
 import {
   readFile,
   writeFile,
@@ -13,6 +13,7 @@ import {
 export interface GenerateTestsOptions {
   card: string;
   filePath: string;
+  testType?: TestType;
   outputDir?: string;
   contextPaths?: string[];
   maxContextFiles?: number;
@@ -25,6 +26,7 @@ export interface GenerateTestsResult {
   testFilePath: string;
   testCount: number;
   generatedCode: string;
+  testType: TestType;
   language: 'typescript' | 'javascript';
   usedContextFiles: string[];
   skippedContextInputs: string[];
@@ -47,6 +49,7 @@ export class TestGeneratorService {
     const {
       card,
       filePath,
+      testType = 'unit',
       outputDir = 'tests',
       contextPaths = [],
       maxContextFiles,
@@ -64,14 +67,14 @@ export class TestGeneratorService {
       maxTotalChars: maxContextTotalChars,
     });
     const promptCode = context.promptContext ? `${code}\n\n${context.promptContext}` : code;
-    const prompt = this.llm.buildTestPrompt(card, promptCode, language);
+    const prompt = this.llm.buildTestPrompt(card, promptCode, language, testType);
     const rawResponse = onToken
       ? await this.llm.stream(prompt, onToken)
       : await this.llm.complete(prompt);
     const testCode = stripCodeFences(rawResponse);
 
     const baseName = getBaseName(filePath);
-    const testFileName = `${baseName}${testExtension(language)}`;
+    const testFileName = `${baseName}${this.testSuffix(language, testType)}`;
     const testFilePath = path.join(outputDir, testFileName);
 
     // Post-process generated test code to ensure import path points to the
@@ -97,6 +100,7 @@ export class TestGeneratorService {
       testFilePath,
       testCount,
       generatedCode: testCode,
+      testType,
       language,
       usedContextFiles: context.usedFiles,
       skippedContextInputs: context.skippedInputs,
@@ -115,5 +119,11 @@ export class TestGeneratorService {
   private countTestCases(code: string): number {
     const matches = code.match(/^\s*(?:it|test)\s*\(/gm);
     return matches ? matches.length : 0;
+  }
+
+  private testSuffix(language: 'typescript' | 'javascript', testType: TestType): string {
+    const base = testExtension(language); // .spec.ts | .spec.js
+    if (testType === 'unit') return base;
+    return base.replace('.spec.', '.integration.spec.');
   }
 }

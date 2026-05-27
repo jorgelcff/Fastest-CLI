@@ -12,6 +12,7 @@ export function buildDoctorCommand(): Command {
   cmd
     .description('Validate target project environment and prerequisites for Fastest CLI')
     .option('--cwd <dir>', 'Directory of the target project', process.cwd())
+    .option('--integration', 'Validate extra prerequisites for integration tests', false)
     .option('--context <paths...>', 'Additional files/folders to validate with context guard rails')
     .option('--max-context-files <n>', 'Maximum number of context files to include', (v: string) => parseInt(v, 10), 20)
     .option('--max-context-chars <n>', 'Maximum characters per context file', (v: string) => parseInt(v, 10), 4000)
@@ -19,6 +20,7 @@ export function buildDoctorCommand(): Command {
     .option('--strict-context', 'Fail if any context guard rail warning is found', false)
     .action((opts: {
       cwd: string;
+      integration: boolean;
       context?: string[];
       maxContextFiles: number;
       maxContextChars: number;
@@ -42,11 +44,13 @@ export function buildDoctorCommand(): Command {
 
       // 2. jest.config.js or jest script
       let hasJest = false;
+      let pkg: Record<string, unknown> = {};
       const jestConfig = fs.existsSync(path.join(root, 'jest.config.js')) || fs.existsSync(path.join(root, 'jest.config.cjs'));
       if (pkgExists) {
         try {
-          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-          hasJest = Boolean(pkg.scripts && (pkg.scripts.test || pkg.scripts['test:coverage']));
+          pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+          const scripts = (pkg as { scripts?: Record<string, string> }).scripts;
+          hasJest = Boolean(scripts && (scripts.test || scripts['test:coverage']));
         } catch {}
       }
       checks.push({
@@ -113,6 +117,15 @@ export function buildDoctorCommand(): Command {
           ? `Substitua o placeholder em .env com sua chave real`
           : `Execute \`fastest config set-key --provider ${activeProvider}\` ou defina ${envVarName} no .env`,
       });
+
+      if (opts.integration) {
+        const hasSupertest = packageHasDependency(pkg, 'supertest');
+        checks.push({
+          name: 'supertest instalado (modo integração)',
+          ok: hasSupertest,
+          hint: 'Instale com `npm i -D supertest @types/supertest`',
+        });
+      }
 
       // Print checks
       let allOk = true;
@@ -182,4 +195,10 @@ export function buildDoctorCommand(): Command {
     });
 
   return cmd;
+}
+
+function packageHasDependency(pkg: Record<string, unknown>, depName: string): boolean {
+  const dependencies = (pkg.dependencies as Record<string, unknown> | undefined) ?? {};
+  const devDependencies = (pkg.devDependencies as Record<string, unknown> | undefined) ?? {};
+  return Boolean(dependencies[depName] || devDependencies[depName]);
 }
