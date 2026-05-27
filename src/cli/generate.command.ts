@@ -3,7 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
 import ora from 'ora';
-import { LLMService } from '../services/llm.service';
+import { LLMService, TestType } from '../services/llm.service';
 import { TestGeneratorService } from '../services/test-generator.service';
 import { CoverageService, CoverageData } from '../services/coverage.service';
 import { buildPromptContextFromPaths, getBaseName, readFile, detectLanguage, testExtension } from '../utils/file.utils';
@@ -62,6 +62,7 @@ export function buildGenerateCommand(): Command {
     .description('Generate Jest unit tests from a card description and a source file')
     .requiredOption('--card <text>', 'Card description (feature or task being tested)')
     .requiredOption('--file <path>', 'Path to the source file to generate tests for')
+    .option('--test-type <type>', 'Test type: unit | integration', 'unit')
     .option('--context <paths...>', 'Additional files/folders to include as system context for generation')
     .option('--max-context-files <n>', 'Maximum number of context files to include', (v: string) => parseInt(v, 10), 20)
     .option('--max-context-chars <n>', 'Maximum characters per context file', (v: string) => parseInt(v, 10), 4000)
@@ -74,6 +75,7 @@ export function buildGenerateCommand(): Command {
     .action(async (opts: {
       card: string;
       file: string;
+      testType: string;
       output: string;
       model?: string;
       context?: string[];
@@ -85,6 +87,7 @@ export function buildGenerateCommand(): Command {
       suggest: boolean;
     }) => {
       console.log(HEADER);
+      const parsedTestType = parseTestType(opts.testType);
 
       if (opts.dryRun) {
         console.log(chalk.yellow('🧪 DRY-RUN') + chalk.gray(' — nenhuma chamada externa ou escrita em disco.\n'));
@@ -101,12 +104,13 @@ export function buildGenerateCommand(): Command {
           const testFilePath = path.join(opts.output, `${getBaseName(opts.file)}${testExtension(language)}`);
           const modelName = opts.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
           const promptCode = context.promptContext ? `${source}\n\n${context.promptContext}` : source;
-          const prompt = LLMService.buildTestPrompt(opts.card, promptCode, language);
+          const prompt = LLMService.buildTestPrompt(opts.card, promptCode, language, parsedTestType);
           const promptPreview = prompt.split(/\r?\n/).slice(0, 12).join('\n');
 
           console.log(chalk.bold('Configuração:'));
           console.log(`  ${chalk.cyan('Arquivo fonte  ')} ${opts.file} ${chalk.gray(`(${sourceLines} linhas)`)}`);
           console.log(`  ${chalk.cyan('Linguagem      ')} ${language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
+          console.log(`  ${chalk.cyan('Tipo de teste  ')} ${parsedTestType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
           console.log(`  ${chalk.cyan('Card           ')} ${chalk.gray(`${opts.card.length} caracteres`)}`);
           console.log(`  ${chalk.cyan('Modelo         ')} ${modelName}`);
           console.log(`  ${chalk.cyan('Saída planejada')} ${testFilePath}`);
@@ -133,8 +137,10 @@ export function buildGenerateCommand(): Command {
 
           console.log(`\n${chalk.bold('Etapas planejadas:')}`);
           const steps = [
-            'Construir prompt LLM com card + código fonte',
-            'Chamar LLM para gerar testes Jest',
+            `Construir prompt LLM (${parsedTestType}) com card + código fonte`,
+            parsedTestType === 'integration'
+              ? 'Chamar LLM para gerar testes Jest + Supertest'
+              : 'Chamar LLM para gerar testes Jest',
             'Salvar testes no diretório de saída',
             'Executar Jest com cobertura',
           ];
@@ -187,6 +193,7 @@ export function buildGenerateCommand(): Command {
         result = await generator.generate({
           card: opts.card,
           filePath: opts.file,
+          testType: parsedTestType,
           outputDir: opts.output,
           contextPaths: opts.context,
           maxContextFiles: opts.maxContextFiles,
@@ -206,6 +213,7 @@ export function buildGenerateCommand(): Command {
       }
 
       console.log(`  ${chalk.cyan('Arquivo   ')} ${result.testFilePath}`);
+      console.log(`  ${chalk.cyan('Tipo      ')} ${result.testType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
       console.log(`  ${chalk.cyan('Linguagem ')} ${result.language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
       console.log(`  ${chalk.cyan('Testes    ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
 
@@ -257,6 +265,13 @@ export function buildGenerateCommand(): Command {
       } else {
         console.log(chalk.gray(runResult.coverageSummary));
       }
+
+      const gaps = coverage.analyzeCriticalFlowGaps(afterCoverage ?? runResult.coverageData);
+      if (gaps.length > 0) {
+        console.log('');
+        console.log(chalk.bold('Gaps críticos de fluxo:'));
+        gaps.forEach((gap) => console.log(`  ${chalk.yellow('•')} ${gap.message} ${chalk.gray(`(${gap.score}%)`)}`));
+      }
       console.log('');
 
       if (!runResult.success) {
@@ -271,7 +286,7 @@ export function buildGenerateCommand(): Command {
         const spinnerSug = ora({ text: chalk.gray('Analisando gaps de cobertura…'), spinner: 'dots' }).start();
         try {
           const code = readFile(opts.file);
-          const suggestionPrompt = llm.buildCoverageSuggestionPrompt(opts.card, code, runResult.coverageSummary);
+          const suggestionPrompt = llm.buildCoverageSuggestionPrompt(opts.card, code, runResult.coverageSummary, parsedTestType);
           const suggestions = await llm.complete(suggestionPrompt);
           spinnerSug.succeed(chalk.green('Sugestões geradas!'));
           console.log(chalk.gray('─'.repeat(60)));
@@ -306,6 +321,14 @@ function hasContextGuardRailViolations(context: {
     context.limitedByMaxFiles ||
     context.limitedByMaxTotalChars
   );
+}
+
+function parseTestType(value: string): TestType {
+  const normalized = (value || '').toLowerCase().trim();
+  if (normalized === 'integration' || normalized === 'unit') {
+    return normalized;
+  }
+  throw new Error(`Invalid --test-type "${value}". Use "unit" or "integration".`);
 }
 
 function hasGenerationContextViolations(result: {

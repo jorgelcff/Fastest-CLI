@@ -3,6 +3,8 @@ import { createProvider, detectProvider, defaultModelForProvider } from '../prov
 import { LLMProvider } from '../providers/provider.interface';
 import { SourceLanguage } from '../utils/file.utils';
 
+export type TestType = 'unit' | 'integration';
+
 export interface LLMServiceOptions {
   apiKey?: string;
   model?: string;
@@ -40,11 +42,37 @@ export class LLMService {
     return this.provider.stream(prompt, onToken);
   }
 
-  static buildTestPrompt(card: string, code: string, language: SourceLanguage = 'typescript'): string {
+  static buildTestPrompt(
+    card: string,
+    code: string,
+    language: SourceLanguage = 'typescript',
+    testType: TestType = 'unit',
+  ): string {
     const langInstructions =
       language === 'typescript'
         ? 'Retorne apenas código TypeScript válido, sem explicações, sem blocos markdown.'
         : 'Retorne apenas código JavaScript válido (CommonJS, use require()), sem explicações, sem blocos markdown.';
+
+    if (testType === 'integration') {
+      return `Você é um especialista em testes de integração de APIs e fluxos de negócio.
+Gere testes de integração em Jest + Supertest para o código abaixo.
+
+CARD (fluxo funcional):
+${card}
+
+CÓDIGO:
+${code}
+
+Regras obrigatórias:
+- Cubra o fluxo ponta a ponta do caso de uso descrito no card
+- Inclua cenários de sucesso e de falha de comunicação/API
+- Use mocks determinísticos para dependências externas (ex.: banco, fila, API externa) com jest.mock/jest.spyOn
+- Evite dependências de estado global e infraestrutura real
+- Organize os testes por cenários de negócio (não apenas por função isolada)
+- Se necessário, faça bootstrap da aplicação para requisições HTTP via Supertest
+
+${langInstructions}`;
+    }
 
     return `Você é um especialista em testes.
 Gere testes unitários em Jest para o seguinte código:
@@ -63,11 +91,26 @@ Inclua:
 ${langInstructions}`;
   }
 
-  buildTestPrompt(card: string, code: string, language: SourceLanguage = 'typescript'): string {
-    return LLMService.buildTestPrompt(card, code, language);
+  buildTestPrompt(
+    card: string,
+    code: string,
+    language: SourceLanguage = 'typescript',
+    testType: TestType = 'unit',
+  ): string {
+    return LLMService.buildTestPrompt(card, code, language, testType);
   }
 
-  static buildCoverageSuggestionPrompt(card: string, code: string, coverageSummary: string): string {
+  static buildCoverageSuggestionPrompt(
+    card: string,
+    code: string,
+    coverageSummary: string,
+    testType: TestType = 'unit',
+  ): string {
+    const flowRequirement =
+      testType === 'integration'
+        ? '\nDestaque também fluxos críticos do caso de uso ainda não cobertos ponta a ponta.'
+        : '';
+
     return `Você é um especialista em qualidade de software.
 
 Com base no seguinte relatório de cobertura de testes, sugira novos casos de teste para melhorar a cobertura.
@@ -81,10 +124,15 @@ ${code}
 RELATÓRIO DE COBERTURA:
 ${coverageSummary}
 
-Liste apenas os cenários de teste que ainda não estão cobertos. Seja conciso e objetivo.`;
+Liste apenas os cenários de teste que ainda não estão cobertos. Seja conciso e objetivo.${flowRequirement}`;
   }
 
-  buildCoverageSuggestionPrompt(card: string, code: string, coverageSummary: string): string {
-    return LLMService.buildCoverageSuggestionPrompt(card, code, coverageSummary);
+  buildCoverageSuggestionPrompt(
+    card: string,
+    code: string,
+    coverageSummary: string,
+    testType: TestType = 'unit',
+  ): string {
+    return LLMService.buildCoverageSuggestionPrompt(card, code, coverageSummary, testType);
   }
 }

@@ -41,6 +41,7 @@ describe('TestGeneratorService', () => {
     expect(llm.complete).toHaveBeenCalledTimes(1);
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
     expect(result.testFilePath).toBe(path.join('tests', 'math.spec.ts'));
+    expect(result.testType).toBe('unit');
   });
 
   it('strips markdown code fences from LLM response', async () => {
@@ -90,5 +91,20 @@ describe('TestGeneratorService', () => {
     expect(result.usedContextFiles).toHaveLength(0);
     expect(result.skippedContextInputs).toHaveLength(0);
     expect(result.totalContextCharsIncluded).toBe(0);
+  });
+
+  it('uses integration naming when requested', async () => {
+    const llm = makeMockLLM('describe("integration", () => { it("works", () => {}); });');
+    const svc = new TestGeneratorService(llm);
+
+    const result = await svc.generate({
+      card: 'c',
+      filePath: 'src/foo.ts',
+      outputDir: 'tests',
+      testType: 'integration',
+    });
+
+    expect(result.testType).toBe('integration');
+    expect(result.testFilePath).toBe(path.join('tests', 'foo.integration.spec.ts'));
   });
 });

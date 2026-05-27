@@ -60,7 +60,8 @@ Aponte na saída:
 ```bash
 fastest generate \
   --card="Como QA, quero validar as regras de negócio do OrderService: criação de pedido com validação de estoque e desconto, confirmação e cancelamento" \
-  --file="example/order.service.ts"
+  --file="example/order.service.ts" \
+  --test-type integration
 ```
 
 **O que mostrar enquanto roda:**
@@ -73,7 +74,8 @@ fastest generate \
 ```
 ✔ Baseline: 0% stmts · 0% branches · 0% funcs · 0% lines
 ✔ Testes gerados! (350 tokens · gpt-4o-mini)
-  Arquivo    tests/order.service.spec.ts
+  Arquivo    tests/order.service.integration.spec.ts
+  Tipo       Integração
   Linguagem  TypeScript
   Testes     18 caso(s) encontrado(s)
 ✔ TypeScript válido

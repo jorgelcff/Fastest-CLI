@@ -67,13 +67,17 @@ function makeCoverageMock(success = true) {
     readCoverageForFile: jest.fn().mockReturnValue(
       success ? { statements: 90, branches: 80, functions: 100, lines: 90 } : undefined,
     ),
+    validateGeneratedFile: jest.fn().mockReturnValue({ valid: true, errors: '' }),
+    analyzeCriticalFlowGaps: jest.fn().mockReturnValue([]),
   } as unknown as CoverageService));
 }
 
-function makeGeneratorMock(count = 10) {
+function makeGeneratorMock(count = 10, testType: 'unit' | 'integration' = 'unit') {
   MockTestGenerator.mockImplementation(() => ({
     generate: jest.fn().mockResolvedValue({
-      testFilePath: 'tests/math.utils.spec.ts', testCount: count, generatedCode: '',
+      testFilePath: testType === 'integration' ? 'tests/math.utils.integration.spec.ts' : 'tests/math.utils.spec.ts',
+      testCount: count, generatedCode: '', testType,
+      language: 'typescript',
       usedContextFiles: [], skippedContextInputs: [], truncatedContextFiles: [],
       skippedByExtensionContextFiles: [], skippedBinaryContextFiles: [],
       limitedByMaxContextFiles: false, limitedByMaxTotalContextChars: false, totalContextCharsIncluded: 0,
@@ -204,6 +208,16 @@ describe('generate — full pipeline', () => {
     makeGeneratorMock();
     await runGenerate();
     expect(firstExitCode).toBe(1);
+  });
+
+  it('passes integration mode to generator', async () => {
+    makeLLMMock();
+    makeCoverageMock(true);
+    makeGeneratorMock(10, 'integration');
+    await runGenerate(['--test-type=integration']);
+    const instance = MockTestGenerator.mock.results[0].value as { generate: jest.Mock };
+    expect(instance.generate).toHaveBeenCalledWith(expect.objectContaining({ testType: 'integration' }));
+    expect(firstExitCode).toBe(0);
   });
 });
 

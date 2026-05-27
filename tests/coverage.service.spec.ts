@@ -125,4 +125,29 @@ describe('CoverageService', () => {
       );
     });
   });
+
+  describe('analyzeCriticalFlowGaps', () => {
+    it('returns no gaps for high coverage', () => {
+      const svc = new CoverageService(root);
+      const gaps = svc.analyzeCriticalFlowGaps({
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      });
+      expect(gaps).toHaveLength(0);
+    });
+
+    it('returns gaps for low critical metrics', () => {
+      const svc = new CoverageService(root);
+      const gaps = svc.analyzeCriticalFlowGaps({
+        statements: 60,
+        branches: 50,
+        functions: 70,
+        lines: 65,
+      });
+      expect(gaps.length).toBeGreaterThan(0);
+      expect(gaps.some((g) => g.metric === 'branches')).toBe(true);
+    });
+  });
 });
