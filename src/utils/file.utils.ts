@@ -70,6 +70,29 @@ export function getBaseName(filePath: string): string {
 
 export type SourceLanguage = 'typescript' | 'javascript';
 
+export type TestFramework = 'jest' | 'vitest';
+
+/**
+ * Detects the test framework used in the project by checking package.json
+ * dependencies and config files. Defaults to 'jest' if Vitest is not found.
+ */
+export function detectTestFramework(projectRoot: string = process.cwd()): TestFramework {
+  const pkgPath = path.join(projectRoot, 'package.json');
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+      if (allDeps['vitest']) return 'vitest';
+    } catch {}
+  }
+  // Check for vitest config files
+  const vitestConfigs = ['vitest.config.ts', 'vitest.config.js', 'vitest.config.mts'];
+  for (const config of vitestConfigs) {
+    if (fs.existsSync(path.join(projectRoot, config))) return 'vitest';
+  }
+  return 'jest';
+}
+
 const TS_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts']);
 
 /**

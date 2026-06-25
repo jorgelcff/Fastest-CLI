@@ -42,21 +42,25 @@ export function buildDoctorCommand(): Command {
         hint: 'Execute `npm init` ou garanta que package.json existe',
       });
 
-      // 2. jest.config.js or jest script
-      let hasJest = false;
+      // 2. jest or vitest config
+      let hasTestRunner = false;
       let pkg: Record<string, unknown> = {};
       const jestConfig = fs.existsSync(path.join(root, 'jest.config.js')) || fs.existsSync(path.join(root, 'jest.config.cjs'));
+      const vitestConfig = fs.existsSync(path.join(root, 'vitest.config.ts')) || fs.existsSync(path.join(root, 'vitest.config.js')) || fs.existsSync(path.join(root, 'vitest.config.mts'));
       if (pkgExists) {
         try {
           pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
           const scripts = (pkg as { scripts?: Record<string, string> }).scripts;
-          hasJest = Boolean(scripts && (scripts.test || scripts['test:coverage']));
+          hasTestRunner = Boolean(scripts && (scripts.test || scripts['test:coverage']));
+          const devDeps = (pkg as { devDependencies?: Record<string, unknown> }).devDependencies ?? {};
+          const deps = (pkg as { dependencies?: Record<string, unknown> }).dependencies ?? {};
+          if (devDeps['vitest'] || deps['vitest']) hasTestRunner = true;
         } catch {}
       }
       checks.push({
-        name: 'Jest configurado (script ou arquivo de config)',
-        ok: jestConfig || hasJest,
-        hint: 'Instale Jest (npm i -D jest) ou adicione um script test no package.json',
+        name: 'Jest ou Vitest configurado',
+        ok: jestConfig || vitestConfig || hasTestRunner,
+        hint: 'Instale Jest (npm i -D jest) ou Vitest (npm i -D vitest) e adicione um script test no package.json',
       });
 
       // 3. tsconfig.json exists (TypeScript project)

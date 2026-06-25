@@ -11,6 +11,7 @@ import {
   type Provider,
 } from '../config/config.manager';
 import { detectProvider } from '../providers/provider.factory';
+import { CacheService } from '../services/cache.service';
 
 const KEY_HINTS: Record<Provider, string> = {
   openai:    'https://platform.openai.com/api-keys',
@@ -137,6 +138,32 @@ export function buildConfigCommand(): Command {
       clearConfig();
       console.log(chalk.green('\n✔ Configuração removida.\n'));
     });
+
+  // ── cache ───────────────────────────────────────────────────────────────────
+  const cacheCmd = new Command('cache');
+  cacheCmd.description('Manage LLM response cache');
+
+  cacheCmd
+    .command('clear')
+    .description('Clear all cached responses')
+    .action(() => {
+      const cache = new CacheService();
+      const count = cache.clear();
+      console.log(chalk.green(`✔ ${count} entrada(s) de cache removida(s).`));
+    });
+
+  cacheCmd
+    .command('stats')
+    .description('Show cache statistics')
+    .action(() => {
+      const cache = new CacheService();
+      const { entries, sizeBytes } = cache.stats();
+      const sizeKb = (sizeBytes / 1024).toFixed(1);
+      console.log(`  Entradas: ${chalk.bold(String(entries))}`);
+      console.log(`  Tamanho:  ${chalk.bold(sizeKb)} KB`);
+    });
+
+  cmd.addCommand(cacheCmd);
 
   return cmd;
 }

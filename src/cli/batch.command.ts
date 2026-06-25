@@ -6,6 +6,7 @@ import ora from 'ora';
 import dotenv from 'dotenv';
 import { LLMService, TestType } from '../services/llm.service';
 import { TestGeneratorService } from '../services/test-generator.service';
+import { detectTestFramework, TestFramework } from '../utils/file.utils';
 
 dotenv.config();
 
@@ -66,11 +67,16 @@ export function buildBatchCommand(): Command {
     .option('--model <model>', 'LLM model to use')
     .option('--retries <n>', 'Retry attempts per file if tests fail validation', (v: string) => parseInt(v, 10), 0)
     .option('--concurrency <n>', 'Number of files to process', (v: string) => parseInt(v, 10), 0)
+    .option('--framework <framework>', 'Test framework: jest | vitest | auto', 'auto')
     .option('--dry-run', 'List matched files without generating tests', false)
+    .option('--cache', 'Cache LLM responses to avoid redundant API calls', false)
     .action(async (opts) => {
       console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Batch Mode\n'));
 
       const parsedTestType = parseTestType(opts.testType);
+      const framework: TestFramework = opts.framework === 'vitest' ? 'vitest'
+        : opts.framework === 'jest' ? 'jest'
+        : detectTestFramework();
       const files = resolveFiles(opts.files);
 
       if (files.length === 0) {
@@ -91,7 +97,7 @@ export function buildBatchCommand(): Command {
 
       let llm: LLMService;
       try {
-        llm = new LLMService({ model: opts.model });
+        llm = new LLMService({ model: opts.model, cache: opts.cache });
       } catch (err: unknown) {
         console.error(chalk.red(`✖ ${(err as Error).message}`));
         process.exit(1);
@@ -113,6 +119,7 @@ export function buildBatchCommand(): Command {
             card: opts.card,
             filePath: file,
             testType: parsedTestType,
+            framework,
             outputDir: opts.output,
             maxRetries: opts.retries,
           });

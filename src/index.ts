@@ -6,6 +6,7 @@ import { buildGenerateCommand } from './cli/generate.command';
 import { buildDoctorCommand } from './cli/doctor.command';
 import { buildConfigCommand } from './cli/config.command';
 import { buildBatchCommand } from './cli/batch.command';
+import { buildInitCommand } from './cli/init.command';
 import { version } from '../package.json';
 
 const program = new Command();
@@ -19,6 +20,7 @@ program.addCommand(buildGenerateCommand());
 program.addCommand(buildDoctorCommand());
 program.addCommand(buildConfigCommand());
 program.addCommand(buildBatchCommand());
+program.addCommand(buildInitCommand());
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   console.error(chalk.red(`\n✖ Erro inesperado: ${(err as Error).message}\n`));

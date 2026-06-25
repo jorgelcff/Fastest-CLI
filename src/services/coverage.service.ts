@@ -1,6 +1,7 @@
 import { execSync, ExecSyncOptionsWithStringEncoding } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { TestFramework } from '../utils/file.utils';
 
 export interface RunTestsResult {
   success: boolean;
@@ -36,9 +37,11 @@ export interface CoverageThresholds {
 
 export class CoverageService {
   private readonly projectRoot: string;
+  private readonly framework: TestFramework;
 
-  constructor(projectRoot: string = process.cwd()) {
+  constructor(projectRoot: string = process.cwd(), framework: TestFramework = 'jest') {
     this.projectRoot = path.resolve(projectRoot);
+    this.framework = framework;
   }
 
   /**
@@ -54,11 +57,12 @@ export class CoverageService {
     let output = '';
     let success = false;
 
+    const runCmd = this.framework === 'vitest'
+      ? `npx vitest run "${testFilePath}" --reporter=verbose 2>&1`
+      : `npx jest "${testFilePath}" --no-coverage --passWithNoTests 2>&1`;
+
     try {
-      output = execSync(
-        `npx jest "${testFilePath}" --no-coverage --passWithNoTests 2>&1`,
-        opts,
-      );
+      output = execSync(runCmd, opts);
       success = true;
     } catch (err: unknown) {
       const execErr = err as { stdout?: string; stderr?: string; message?: string };
@@ -87,11 +91,12 @@ export class CoverageService {
     let output = '';
     let success = false;
 
+    const covCmd = this.framework === 'vitest'
+      ? 'npx vitest run --coverage --reporter=verbose 2>&1'
+      : 'npx jest --coverage --passWithNoTests 2>&1';
+
     try {
-      output = execSync(
-        'npx jest --coverage --passWithNoTests 2>&1',
-        opts,
-      );
+      output = execSync(covCmd, opts);
       success = true;
     } catch (err: unknown) {
       const execErr = err as { stdout?: string; stderr?: string; message?: string };

@@ -9,6 +9,7 @@ import {
   buildPromptContextFromPaths,
   detectLanguage,
   testExtension,
+  detectTestFramework,
 } from '../src/utils/file.utils';
 
 let tmpDir: string;
@@ -123,6 +124,37 @@ describe('stripCodeFences', () => {
   it('returns code unchanged when no fences present', () => {
     const input = 'const x = 1;';
     expect(stripCodeFences(input)).toBe('const x = 1;');
+  });
+});
+
+// ── detectTestFramework ──────────────────────────────────────────────────────
+
+describe('detectTestFramework', () => {
+  it('returns jest by default when no vitest is found', () => {
+    const dir = path.join(tmpDir, 'jest-proj');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ devDependencies: { jest: '^29.0.0' } }));
+    expect(detectTestFramework(dir)).toBe('jest');
+  });
+
+  it('returns vitest when vitest is in devDependencies', () => {
+    const dir = path.join(tmpDir, 'vitest-proj');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ devDependencies: { vitest: '^1.0.0' } }));
+    expect(detectTestFramework(dir)).toBe('vitest');
+  });
+
+  it('returns vitest when vitest.config.ts exists', () => {
+    const dir = path.join(tmpDir, 'vitest-config-proj');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'vitest.config.ts'), 'export default {}');
+    expect(detectTestFramework(dir)).toBe('vitest');
+  });
+
+  it('returns jest when no package.json or config files exist', () => {
+    const dir = path.join(tmpDir, 'empty-proj');
+    fs.mkdirSync(dir);
+    expect(detectTestFramework(dir)).toBe('jest');
   });
 });
 
