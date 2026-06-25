@@ -1,4 +1,4 @@
-import { add, subtract, multiply, divide, isPrime } from '../example/math.utils';
+import { add, subtract, multiply, divide, isPrime } from './math.utils';
 
 describe('Math Utility Functions', () => {
   describe('add', () => {

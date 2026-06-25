@@ -126,6 +126,115 @@ describe('CoverageService', () => {
     });
   });
 
+  // ── runTests error handling ─────────────────────────────────────────────────
+
+  describe('runTests (error handling)', () => {
+    it('returns success=false with combined output when execSync throws', () => {
+      mockExecSync.mockImplementation(() => {
+        const err = new Error('jest failed') as Error & { stdout: string; stderr: string };
+        err.stdout = 'FAIL tests/foo.spec.ts';
+        err.stderr = 'Some error output';
+        throw err;
+      });
+      mockFs.existsSync.mockReturnValue(false);
+      const svc = new CoverageService(root);
+      const result = svc.runTests('tests/foo.spec.ts');
+      expect(result.success).toBe(false);
+      expect(result.output).toContain('FAIL tests/foo.spec.ts');
+      expect(result.output).toContain('Some error output');
+    });
+  });
+
+  // ── readCoverageForFile ────────────────────────────────────────────────────
+
+  describe('readCoverageForFile', () => {
+    const FILE_SUMMARY = {
+      '/project/src/foo.ts': {
+        statements: { pct: 80 },
+        branches: { pct: 70 },
+        functions: { pct: 90 },
+        lines: { pct: 85 },
+      },
+    };
+
+    it('returns coverage when file key matches absolute path', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(FILE_SUMMARY) as unknown as ReturnType<typeof fs.readFileSync>);
+      const svc = new CoverageService(root);
+      const data = svc.readCoverageForFile('/project/src/foo.ts');
+      expect(data).toEqual({ statements: 80, branches: 70, functions: 90, lines: 85 });
+    });
+
+    it('returns undefined when file has no coverage entry', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue(JSON.stringify(FILE_SUMMARY) as unknown as ReturnType<typeof fs.readFileSync>);
+      const svc = new CoverageService(root);
+      const data = svc.readCoverageForFile('/project/src/bar.ts');
+      expect(data).toBeUndefined();
+    });
+
+    it('returns undefined when summary file does not exist', () => {
+      mockFs.existsSync.mockReturnValue(false);
+      const svc = new CoverageService(root);
+      const data = svc.readCoverageForFile('/project/src/foo.ts');
+      expect(data).toBeUndefined();
+    });
+  });
+
+  // ── validateGeneratedFile ──────────────────────────────────────────────────
+
+  describe('validateGeneratedFile', () => {
+    it('returns valid=true for .js files without running tsc', () => {
+      const svc = new CoverageService(root);
+      const result = svc.validateGeneratedFile('tests/foo.spec.js');
+      expect(result).toEqual({ valid: true, errors: '' });
+      expect(mockExecSync).not.toHaveBeenCalled();
+    });
+
+    it('returns valid=true when tsc succeeds', () => {
+      mockFs.existsSync.mockReturnValue(false);
+      mockExecSync.mockReturnValue('' as unknown as ReturnType<typeof fs.readFileSync>);
+      const svc = new CoverageService(root);
+      const result = svc.validateGeneratedFile('tests/foo.spec.ts');
+      expect(result).toEqual({ valid: true, errors: '' });
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining('tsconfig.json'),
+        expect.any(Object),
+      );
+    });
+
+    it('uses tsconfig.test.json when it exists', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockExecSync.mockReturnValue('' as unknown as ReturnType<typeof fs.readFileSync>);
+      const svc = new CoverageService(root);
+      svc.validateGeneratedFile('tests/foo.spec.ts');
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining('tsconfig.test.json'),
+        expect.any(Object),
+      );
+    });
+
+    it('returns valid=false with filtered errors when tsc fails', () => {
+      mockFs.existsSync.mockReturnValue(false);
+      mockExecSync.mockImplementation(() => {
+        const err = new Error('tsc failed') as Error & { stdout: string; stderr: string };
+        err.stdout = [
+          'tests/foo.spec.ts(3,5): error TS2304: Cannot find name "x".',
+          'some other line',
+          'error TS6053: File not found.',
+        ].join('\n');
+        err.stderr = '';
+        throw err;
+      });
+      const svc = new CoverageService(root);
+      const result = svc.validateGeneratedFile('tests/foo.spec.ts');
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('error TS2304');
+      expect(result.errors).toContain('error TS6053');
+      expect(result.errors).not.toContain('some other line');
+    });
+  });
+
   describe('analyzeCriticalFlowGaps', () => {
     it('returns no gaps for high coverage', () => {
       const svc = new CoverageService(root);

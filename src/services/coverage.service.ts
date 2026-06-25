@@ -27,6 +27,13 @@ export interface CriticalFlowGap {
   message: string;
 }
 
+export interface CoverageThresholds {
+  branches?: number;
+  statements?: number;
+  lines?: number;
+  functions?: number;
+}
+
 export class CoverageService {
   private readonly projectRoot: string;
 
@@ -119,32 +126,37 @@ export class CoverageService {
     return this.readCoverageFromSummary('total');
   }
 
-  analyzeCriticalFlowGaps(data?: CoverageData): CriticalFlowGap[] {
+  analyzeCriticalFlowGaps(data?: CoverageData, thresholds?: CoverageThresholds): CriticalFlowGap[] {
     if (!data) return [];
     const gaps: CriticalFlowGap[] = [];
 
-    if (data.branches < 70) {
+    const branchesThreshold = thresholds?.branches ?? 70;
+    const statementsThreshold = thresholds?.statements ?? 75;
+    const linesThreshold = thresholds?.lines ?? 75;
+    const functionsThreshold = thresholds?.functions ?? 80;
+
+    if (data.branches < branchesThreshold) {
       gaps.push({
         metric: 'branches',
         score: data.branches,
         message: 'Cobertura de branches baixa: faltam caminhos alternativos e erros de fluxo.',
       });
     }
-    if (data.statements < 75) {
+    if (data.statements < statementsThreshold) {
       gaps.push({
         metric: 'statements',
         score: data.statements,
         message: 'Cobertura de statements baixa: passos do caso de uso não estão totalmente exercitados.',
       });
     }
-    if (data.lines < 75) {
+    if (data.lines < linesThreshold) {
       gaps.push({
         metric: 'lines',
         score: data.lines,
         message: 'Cobertura de linhas baixa: ainda há blocos importantes sem validação.',
       });
     }
-    if (data.functions < 80) {
+    if (data.functions < functionsThreshold) {
       gaps.push({
         metric: 'functions',
         score: data.functions,

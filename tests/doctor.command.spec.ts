@@ -24,6 +24,9 @@ jest.mock('../src/providers/provider.factory', () => ({
 import fs from 'fs';
 import { buildDoctorCommand } from '../src/cli/doctor.command';
 import { resolveApiKeyForProvider } from '../src/config/config.manager';
+import { buildPromptContextFromPaths } from '../src/utils/file.utils';
+
+const mockBuildContext = buildPromptContextFromPaths as jest.MockedFunction<typeof buildPromptContextFromPaths>;
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 const mockResolveApiKey = resolveApiKeyForProvider as jest.MockedFunction<typeof resolveApiKeyForProvider>;
@@ -144,6 +147,19 @@ describe('doctor — process.exit contract', () => {
 });
 
 describe('doctor — integration prerequisites', () => {
+  it('parses --max-context-files as integer', async () => {
+    makeAllFilesExist();
+    mockBuildContext.mockReturnValue({
+      usedFiles: [{ path: 'a.ts', chars: 10, content: '' }], totalCharsIncluded: 10,
+      skippedInputs: [], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/', '--max-context-files', '5', '--max-context-chars', '2000', '--max-context-total-chars', '10000']);
+    expect(mockBuildContext).toHaveBeenCalledWith(['src/'], expect.objectContaining({
+      maxFiles: 5, maxCharsPerFile: 2000, maxTotalChars: 10000,
+    }));
+  });
+
   it('exits with code 0 when supertest dependency exists', async () => {
     mockFs.existsSync.mockImplementation((p) => {
       const s = String(p);
@@ -157,5 +173,106 @@ describe('doctor — integration prerequisites', () => {
     mockResolveApiKey.mockReturnValue({ key: 'sk-test-key', source: 'env' });
     await runDoctor(['--integration']);
     expect(firstExitCode).toBe(0);
+  });
+});
+
+// ── Context guard rails ──────────────────────────────────────────────────────
+
+describe('doctor — context guard rails', () => {
+  beforeEach(() => makeAllFilesExist());
+
+  it('shows context info with no issues', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [{ path: 'a.ts', chars: 100, content: '' }], totalCharsIncluded: 100,
+      skippedInputs: [], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    expect(firstExitCode).toBe(0);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('1');
+  });
+
+  it('warns on skippedInputs', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: ['bad/path'], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('bad/path');
+  });
+
+  it('warns on skippedByExtensionFiles', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: [], skippedByExtensionFiles: ['img.png'], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('img.png');
+  });
+
+  it('warns on skippedBinaryFiles', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: [], skippedByExtensionFiles: [], skippedBinaryFiles: ['bin.exe'],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('bin.exe');
+  });
+
+  it('warns on truncatedFiles', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: [], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: ['big.ts'], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('big.ts');
+  });
+
+  it('warns on limitedByMaxFiles', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: [], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: true, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('Limite de arquivos atingido');
+  });
+
+  it('warns on limitedByMaxTotalChars', async () => {
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: [], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: true,
+    } as any);
+    await runDoctor(['--context', 'src/']);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('Limite total de chars atingido');
+  });
+});
+
+// ── Strict context ───────────────────────────────────────────────────────────
+
+describe('doctor — strict context with issues', () => {
+  it('exits with code 2 and shows strict context message', async () => {
+    makeAllFilesExist();
+    mockBuildContext.mockReturnValue({
+      usedFiles: [], totalCharsIncluded: 0,
+      skippedInputs: ['missing/file'], skippedByExtensionFiles: [], skippedBinaryFiles: [],
+      truncatedFiles: [], limitedByMaxFiles: false, limitedByMaxTotalChars: false,
+    } as any);
+    await runDoctor(['--context', 'src/', '--strict-context']);
+    expect(firstExitCode).toBe(2);
+    const allLogs = (console.log as jest.Mock).mock.calls.flat().join('\n');
+    expect(allLogs).toContain('Strict context');
   });
 });
