@@ -77,7 +77,7 @@ function makeGeneratorMock(count = 10, testType: 'unit' | 'integration' = 'unit'
     generate: jest.fn().mockResolvedValue({
       testFilePath: testType === 'integration' ? 'tests/math.utils.integration.spec.ts' : 'tests/math.utils.spec.ts',
       testCount: count, generatedCode: '', testType,
-      language: 'typescript',
+      language: 'typescript', validationWarnings: [], retryAttempts: 0,
       usedContextFiles: [], skippedContextInputs: [], truncatedContextFiles: [],
       skippedByExtensionContextFiles: [], skippedBinaryContextFiles: [],
       limitedByMaxContextFiles: false, limitedByMaxTotalContextChars: false, totalContextCharsIncluded: 0,
@@ -284,7 +284,7 @@ describe('generate --strict-context — generation violations', () => {
       generate: jest.fn().mockResolvedValue({
         testFilePath: 'tests/math.utils.spec.ts',
         testCount: 5, generatedCode: '', testType: 'unit',
-        language: 'typescript',
+        language: 'typescript', validationWarnings: [], retryAttempts: 0,
         usedContextFiles: [], skippedContextInputs: ['skipped-input'],
         truncatedContextFiles: [], skippedByExtensionContextFiles: [],
         skippedBinaryContextFiles: [], limitedByMaxContextFiles: false,

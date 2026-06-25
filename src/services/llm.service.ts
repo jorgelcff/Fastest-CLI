@@ -135,4 +135,41 @@ Liste apenas os cenários de teste que ainda não estão cobertos. Seja conciso 
   ): string {
     return LLMService.buildCoverageSuggestionPrompt(card, code, coverageSummary, testType);
   }
+
+  static buildRetryPrompt(
+    originalCode: string,
+    generatedTests: string,
+    errors: string,
+    language: SourceLanguage = 'typescript',
+  ): string {
+    const langInstructions =
+      language === 'typescript'
+        ? 'Retorne apenas código TypeScript válido, sem explicações, sem blocos markdown.'
+        : 'Retorne apenas código JavaScript válido (CommonJS, use require()), sem explicações, sem blocos markdown.';
+
+    return `Você é um especialista em testes.
+Os testes gerados abaixo falharam. Corrija-os com base nos erros reportados.
+
+CÓDIGO ORIGINAL:
+${originalCode}
+
+TESTES GERADOS (com falha):
+${generatedTests}
+
+ERROS:
+${errors}
+
+Corrija os testes para que compilem e passem. Mantenha a mesma estrutura e cobertura.
+
+${langInstructions}`;
+  }
+
+  buildRetryPrompt(
+    originalCode: string,
+    generatedTests: string,
+    errors: string,
+    language: SourceLanguage = 'typescript',
+  ): string {
+    return LLMService.buildRetryPrompt(originalCode, generatedTests, errors, language);
+  }
 }

@@ -71,6 +71,7 @@ export function buildGenerateCommand(): Command {
     .option('--output <dir>', 'Output directory for the generated tests', 'tests')
     .option('--model <model>', 'OpenAI model to use (overrides OPENAI_MODEL env var)')
     .option('--dry-run', 'Simulate the full pipeline without calling LLM, writing files, or running Jest', false)
+    .option('--retries <n>', 'Number of retry attempts if generated tests fail validation', (v: string) => parseInt(v, 10), 0)
     .option('--suggest', 'After running tests, suggest additional test cases based on coverage', false)
     .action(async (opts: {
       card: string;
@@ -84,6 +85,7 @@ export function buildGenerateCommand(): Command {
       maxContextTotalChars: number;
       strictContext: boolean;
       dryRun: boolean;
+      retries: number;
       suggest: boolean;
     }) => {
       console.log(HEADER);
@@ -199,6 +201,10 @@ export function buildGenerateCommand(): Command {
           maxContextFiles: opts.maxContextFiles,
           maxContextCharsPerFile: opts.maxContextChars,
           maxContextTotalChars: opts.maxContextTotalChars,
+          maxRetries: opts.retries,
+          onRetry: (attempt, errors) => {
+            spinnerGen.text = chalk.gray(`Corrigindo testes (tentativa ${attempt})…`);
+          },
           onToken: () => {
             tokenCount++;
             spinnerGen.text = chalk.gray(`Gerando testes… `) + chalk.dim(`${tokenCount} tokens`);
@@ -216,6 +222,17 @@ export function buildGenerateCommand(): Command {
       console.log(`  ${chalk.cyan('Tipo      ')} ${result.testType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
       console.log(`  ${chalk.cyan('Linguagem ')} ${result.language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
       console.log(`  ${chalk.cyan('Testes    ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
+
+      if (result.validationWarnings.length > 0) {
+        console.log(`  ${chalk.yellow('⚠ Validação:')} ${result.validationWarnings.length} aviso(s)`);
+        result.validationWarnings.forEach(w => {
+          console.log(`    ${chalk.yellow('•')} ${w}`);
+        });
+      }
+
+      if (result.retryAttempts > 0) {
+        console.log(`  ${chalk.cyan('Retries   ')} ${chalk.bold(String(result.retryAttempts))} correção(ões) aplicada(s)`);
+      }
 
       if (result.usedContextFiles.length > 0) {
         console.log(`  ${chalk.cyan('Contexto')} ${result.usedContextFiles.length} arquivo(s) incluído(s)`);
