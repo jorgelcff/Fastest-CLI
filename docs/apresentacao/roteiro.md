@@ -307,81 +307,39 @@ Nosso canvas de experimento define uma hipotese clara e mensuravel. Definimos qu
 
 ---
 
-### Slide 10 — Demo ao Vivo: Titulo
+### Slide 10 — Demo ao Vivo
 
-**Titulo do Slide:** Demo ao Vivo — Fastest CLI em Acao
+**Titulo do Slide:** 🖥️ DEMO AO VIVO — Fastest CLI em Acao
 
 **Conteudo:**
 
-```bash
-$ fastest generate --source src/utils/validator.ts --framework jest
-```
+> **⏸️ PARAR A APRESENTACAO E IR PARA O TERMINAL**
 
 **O que sera demonstrado:**
-1. Geracao de teste a partir de codigo real
-2. Execucao do teste gerado
-3. Relatorio de cobertura
-4. Modo batch para multiplos arquivos
-5. Comando doctor para diagnostico
+1. `fastest doctor` — diagnostico do ambiente (15s)
+2. `fastest generate` — modo interativo sem flags (60s)
+3. `fastest generate --file ... --card ... --test-type use-case` — geracao com flags (60s)
+4. `fastest batch --card "..." --files src/utils/ --dry-run` — modo batch (30s)
+5. Execucao dos testes gerados com `npx jest` (30s)
 
-**Pre-requisitos da demo:**
-- Node.js 18+
-- API key configurada
-- Projeto TypeScript de exemplo
+**Destaques para mostrar:**
+- Modo interativo: CLI pergunta arquivo, card, tipo de teste
+- 3 tipos de teste: unitario, integracao, **caso de uso** (novo!)
+- Pipeline completo: geracao → validacao TypeScript → execucao → delta de cobertura
+- Tabela antes/depois com cores
 
-**Notas do apresentador:**
-
-Agora vamos ver o Fastest CLI funcionando na pratica. Vou demonstrar o fluxo completo: desde a geracao de um teste para um arquivo real ate a execucao e o relatorio de cobertura. Tambem vou mostrar o modo batch, que gera testes para multiplos arquivos de uma vez, e o comando doctor, que diagnostica problemas de configuracao. Vamos ao terminal.
-
-**Tempo estimado:** 30 segundos
-
----
-
-### Slide 11 — Fluxo da Demo (Passo a Passo)
-
-**Titulo do Slide:** Fluxo da Demo — Passo a Passo
-
-**Conteudo:**
-
-**Passo 1: Configuracao inicial**
-```bash
-$ fastest init
-$ fastest config --provider openai --model gpt-4o-mini
-```
-
-**Passo 2: Gerar teste unitario**
-```bash
-$ fastest generate --source src/services/cache.service.ts \
-    --framework jest --type unit
-```
-
-**Passo 3: Executar teste gerado**
-```bash
-$ npx jest tests/cache.service.test.ts
-```
-
-**Passo 4: Geracao em lote**
-```bash
-$ fastest batch --dir src/services --framework vitest
-```
-
-**Passo 5: Diagnostico**
-```bash
-$ fastest doctor
-# Verifica: Node version, API keys, dependencias, configuracao
-```
-
-**Passo 6: Modo dry-run (seguranca)**
-```bash
-$ fastest generate --source src/index.ts --dry-run
-# Mostra o que seria gerado sem chamar a API
-```
+**Pre-requisitos (preparar ANTES):**
+- Terminal aberto no diretorio do projeto
+- API key configurada (`fastest config list` para verificar)
+- Plano B: screenshots dos comandos em caso de falha de API
 
 **Notas do apresentador:**
 
-O fluxo comeca com o init, que cria a configuracao inicial. Depois configuramos o provedor — aqui estou usando OpenAI com gpt-4o-mini. No passo 2, gero um teste unitario para o cache service. Reparem que o teste gerado tem describe blocks, it blocks, mocks, e cobre edge cases. No passo 3, executo o teste e ele passa. O modo batch no passo 4 e poderoso — gera testes para todos os arquivos de um diretorio. O doctor no passo 5 verifica se tudo esta configurado corretamente. E o dry-run no passo 6 e uma feature de seguranca — mostra o que seria gerado sem fazer a chamada de API.
+Agora vou pausar os slides e demonstrar o Fastest CLI ao vivo no terminal. Primeiro, vou rodar o `fastest doctor` para mostrar que o ambiente esta configurado. Depois, vou usar o modo interativo — reparem que o CLI pergunta o arquivo, a descricao do card e o tipo de teste, incluindo o novo tipo "caso de uso" que testa fluxos de negocio completos. Em seguida, mostro a geracao com flags diretas e o modo batch para multiplos arquivos. Vamos ao terminal.
 
-**Tempo estimado:** 2 minutos (com demo ao vivo)
+> **Consultar `docs/apresentacao/demo-script.md` para o roteiro detalhado da demo com falas e plano B.**
+
+**Tempo estimado:** 3-4 minutos (demo ao vivo)
 
 ---
 
