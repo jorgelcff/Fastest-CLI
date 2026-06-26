@@ -1,6 +1,6 @@
 {
   "name": "fastest-cli",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Pipeline Inteligente de Geração de Testes a partir de Cards",
   "main": "dist/index.js",
   "bin": {
@@ -22,7 +22,8 @@
     "dist/",
     "example/",
     "scripts/setup.js",
-    ".env.example"
+    ".env.example",
+    "CHANGELOG.md"
   ],
   "repository": {
     "type": "git",
@@ -47,10 +48,7 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
-    "@types/ora": "^3.1.0",
-    "@types/supertest": "^6.0.3",
     "jest": "^30.3.0",
-    "supertest": "^7.1.4",
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"

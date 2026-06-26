@@ -8,18 +8,23 @@ import {
   buildPromptContextFromPaths,
   detectLanguage,
   testExtension,
+  TestFramework,
 } from '../utils/file.utils';
+import { validateGeneratedTests } from '../utils/test-validation.utils';
 
 export interface GenerateTestsOptions {
   card: string;
   filePath: string;
   testType?: TestType;
+  framework?: TestFramework;
   outputDir?: string;
   contextPaths?: string[];
   maxContextFiles?: number;
   maxContextCharsPerFile?: number;
   maxContextTotalChars?: number;
   onToken?: (token: string) => void;
+  maxRetries?: number;
+  onRetry?: (attempt: number, errors: string) => void;
 }
 
 export interface GenerateTestsResult {
@@ -27,6 +32,9 @@ export interface GenerateTestsResult {
   testCount: number;
   generatedCode: string;
   testType: TestType;
+  framework: TestFramework;
+  retryAttempts: number;
+  validationWarnings: string[];
   language: 'typescript' | 'javascript';
   usedContextFiles: string[];
   skippedContextInputs: string[];
@@ -50,6 +58,7 @@ export class TestGeneratorService {
       card,
       filePath,
       testType = 'unit',
+      framework = 'jest',
       outputDir = 'tests',
       contextPaths = [],
       maxContextFiles,
@@ -67,7 +76,7 @@ export class TestGeneratorService {
       maxTotalChars: maxContextTotalChars,
     });
     const promptCode = context.promptContext ? `${code}\n\n${context.promptContext}` : code;
-    const prompt = this.llm.buildTestPrompt(card, promptCode, language, testType);
+    const prompt = this.llm.buildTestPrompt(card, promptCode, language, testType, framework);
     const rawResponse = onToken
       ? await this.llm.stream(prompt, onToken)
       : await this.llm.complete(prompt);
@@ -90,17 +99,43 @@ export class TestGeneratorService {
     // Replace the first `from '\"...\"';` / `from '\'...\'`;` occurrence to point
     // to the correct relative import. This is conservative and targets the
     // common top-level import the LLM adds.
-    const fixedTestCode = testCode.replace(/from\s+['"][^'"]+['"]/i, `from '${relImport}'`);
+    let fixedTestCode = testCode.replace(/from\s+['"][^'"]+['"]/i, `from '${relImport}'`);
 
     writeFile(testFilePath, fixedTestCode);
 
+    let retryAttempts = 0;
+    if (options.maxRetries && options.maxRetries > 0) {
+      const CoverageServiceMod = require('./coverage.service').CoverageService;
+      const coverageSvc = new CoverageServiceMod(process.cwd());
+
+      for (let attempt = 0; attempt < options.maxRetries; attempt++) {
+        const validation = coverageSvc.validateGeneratedFile(testFilePath);
+        if (validation.valid) break;
+
+        retryAttempts++;
+        if (options.onRetry) options.onRetry(retryAttempts, validation.errors);
+
+        const retryPrompt = this.llm.buildRetryPrompt(code, fixedTestCode, validation.errors, language, framework);
+        const retryResponse = options.onToken
+          ? await this.llm.stream(retryPrompt, options.onToken)
+          : await this.llm.complete(retryPrompt);
+        const retryCode = stripCodeFences(retryResponse);
+        fixedTestCode = retryCode.replace(/from\s+['"][^'"]+['"]/i, `from '${relImport}'`);
+        writeFile(testFilePath, fixedTestCode);
+      }
+    }
+
     const testCount = this.countTestCases(fixedTestCode);
+    const validation = validateGeneratedTests(fixedTestCode, filePath, testFilePath);
 
     return {
       testFilePath,
       testCount,
+      retryAttempts,
       generatedCode: testCode,
       testType,
+      framework,
+      validationWarnings: validation.warnings,
       language,
       usedContextFiles: context.usedFiles,
       skippedContextInputs: context.skippedInputs,

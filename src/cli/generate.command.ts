@@ -6,7 +6,7 @@ import ora from 'ora';
 import { LLMService, TestType } from '../services/llm.service';
 import { TestGeneratorService } from '../services/test-generator.service';
 import { CoverageService, CoverageData } from '../services/coverage.service';
-import { buildPromptContextFromPaths, getBaseName, readFile, detectLanguage, testExtension } from '../utils/file.utils';
+import { buildPromptContextFromPaths, getBaseName, readFile, detectLanguage, testExtension, detectTestFramework, TestFramework } from '../utils/file.utils';
 
 dotenv.config();
 
@@ -71,7 +71,10 @@ export function buildGenerateCommand(): Command {
     .option('--output <dir>', 'Output directory for the generated tests', 'tests')
     .option('--model <model>', 'OpenAI model to use (overrides OPENAI_MODEL env var)')
     .option('--dry-run', 'Simulate the full pipeline without calling LLM, writing files, or running Jest', false)
+    .option('--retries <n>', 'Number of retry attempts if generated tests fail validation', (v: string) => parseInt(v, 10), 0)
+    .option('--framework <framework>', 'Test framework: jest | vitest | auto', 'auto')
     .option('--suggest', 'After running tests, suggest additional test cases based on coverage', false)
+    .option('--cache', 'Cache LLM responses to avoid redundant API calls', false)
     .action(async (opts: {
       card: string;
       file: string;
@@ -84,10 +87,16 @@ export function buildGenerateCommand(): Command {
       maxContextTotalChars: number;
       strictContext: boolean;
       dryRun: boolean;
+      retries: number;
+      framework: string;
       suggest: boolean;
+      cache: boolean;
     }) => {
       console.log(HEADER);
       const parsedTestType = parseTestType(opts.testType);
+      const framework: TestFramework = opts.framework === 'vitest' ? 'vitest'
+        : opts.framework === 'jest' ? 'jest'
+        : detectTestFramework();
 
       if (opts.dryRun) {
         console.log(chalk.yellow('🧪 DRY-RUN') + chalk.gray(' — nenhuma chamada externa ou escrita em disco.\n'));
@@ -104,13 +113,14 @@ export function buildGenerateCommand(): Command {
           const testFilePath = path.join(opts.output, `${getBaseName(opts.file)}${testExtension(language)}`);
           const modelName = opts.model ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
           const promptCode = context.promptContext ? `${source}\n\n${context.promptContext}` : source;
-          const prompt = LLMService.buildTestPrompt(opts.card, promptCode, language, parsedTestType);
+          const prompt = LLMService.buildTestPrompt(opts.card, promptCode, language, parsedTestType, framework);
           const promptPreview = prompt.split(/\r?\n/).slice(0, 12).join('\n');
 
           console.log(chalk.bold('Configuração:'));
           console.log(`  ${chalk.cyan('Arquivo fonte  ')} ${opts.file} ${chalk.gray(`(${sourceLines} linhas)`)}`);
           console.log(`  ${chalk.cyan('Linguagem      ')} ${language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
           console.log(`  ${chalk.cyan('Tipo de teste  ')} ${parsedTestType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
+          console.log(`  ${chalk.cyan('Framework      ')} ${framework === 'vitest' ? chalk.magenta('Vitest') : chalk.green('Jest')}`);
           console.log(`  ${chalk.cyan('Card           ')} ${chalk.gray(`${opts.card.length} caracteres`)}`);
           console.log(`  ${chalk.cyan('Modelo         ')} ${modelName}`);
           console.log(`  ${chalk.cyan('Saída planejada')} ${testFilePath}`);
@@ -164,14 +174,14 @@ export function buildGenerateCommand(): Command {
       // 1. Initialise services
       let llm: LLMService;
       try {
-        llm = new LLMService({ model: opts.model });
+        llm = new LLMService({ model: opts.model, cache: opts.cache });
       } catch (err: unknown) {
         console.error(chalk.red(`✖ ${(err as Error).message}`));
         process.exit(1);
       }
 
       const generator = new TestGeneratorService(llm);
-      const coverage = new CoverageService(process.cwd());
+      const coverage = new CoverageService(process.cwd(), framework);
 
       // 2. Capture baseline coverage BEFORE generating new tests
       const spinnerBaseline = ora({ text: chalk.gray('Capturando cobertura atual (baseline)…'), spinner: 'dots' }).start();
@@ -194,11 +204,16 @@ export function buildGenerateCommand(): Command {
           card: opts.card,
           filePath: opts.file,
           testType: parsedTestType,
+          framework,
           outputDir: opts.output,
           contextPaths: opts.context,
           maxContextFiles: opts.maxContextFiles,
           maxContextCharsPerFile: opts.maxContextChars,
           maxContextTotalChars: opts.maxContextTotalChars,
+          maxRetries: opts.retries,
+          onRetry: (attempt, errors) => {
+            spinnerGen.text = chalk.gray(`Corrigindo testes (tentativa ${attempt})…`);
+          },
           onToken: () => {
             tokenCount++;
             spinnerGen.text = chalk.gray(`Gerando testes… `) + chalk.dim(`${tokenCount} tokens`);
@@ -214,8 +229,20 @@ export function buildGenerateCommand(): Command {
 
       console.log(`  ${chalk.cyan('Arquivo   ')} ${result.testFilePath}`);
       console.log(`  ${chalk.cyan('Tipo      ')} ${result.testType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
+      console.log(`  ${chalk.cyan('Framework ')} ${result.framework === 'vitest' ? chalk.magenta('Vitest') : chalk.green('Jest')}`);
       console.log(`  ${chalk.cyan('Linguagem ')} ${result.language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
       console.log(`  ${chalk.cyan('Testes    ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
+
+      if (result.validationWarnings.length > 0) {
+        console.log(`  ${chalk.yellow('⚠ Validação:')} ${result.validationWarnings.length} aviso(s)`);
+        result.validationWarnings.forEach(w => {
+          console.log(`    ${chalk.yellow('•')} ${w}`);
+        });
+      }
+
+      if (result.retryAttempts > 0) {
+        console.log(`  ${chalk.cyan('Retries   ')} ${chalk.bold(String(result.retryAttempts))} correção(ões) aplicada(s)`);
+      }
 
       if (result.usedContextFiles.length > 0) {
         console.log(`  ${chalk.cyan('Contexto')} ${result.usedContextFiles.length} arquivo(s) incluído(s)`);

@@ -84,6 +84,26 @@ describe('LLMService', () => {
       const svc = new LLMService({ apiKey: 'k' });
       expect(svc.buildTestPrompt('c', 'code')).toBe(LLMService.buildTestPrompt('c', 'code'));
     });
+
+    it('builds vitest prompt with vi.mock instructions', () => {
+      const prompt = LLMService.buildTestPrompt('card', 'code', 'typescript', 'unit', 'vitest');
+      expect(prompt).toContain('Vitest');
+      expect(prompt).toContain('vi.mock()');
+      expect(prompt).not.toContain('jest.mock');
+    });
+
+    it('builds vitest integration prompt without Supertest', () => {
+      const prompt = LLMService.buildTestPrompt('card', 'code', 'typescript', 'integration', 'vitest');
+      expect(prompt).toContain('Vitest');
+      expect(prompt).toContain('vi.mock/vi.spyOn');
+      expect(prompt).not.toContain('Supertest');
+    });
+
+    it('builds jest prompt with jest.mock by default', () => {
+      const prompt = LLMService.buildTestPrompt('card', 'code', 'typescript', 'unit');
+      expect(prompt).toContain('jest.mock()');
+      expect(prompt).toContain('Jest');
+    });
   });
 
   // ── buildCoverageSuggestionPrompt ───────────────────────────────────────────
