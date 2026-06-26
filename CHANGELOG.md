@@ -5,7 +5,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
-## [2.1.0] - 2026-06-25
+## [0.1.0] - 2026-06-25
 
 ### Adicionado
 - Comando `fastest batch` para geração de testes em múltiplos arquivos simultaneamente
@@ -27,7 +27,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Dependência desnecessária `@types/ora` (ora v5 já inclui tipos)
 - Dependências `supertest` e `@types/supertest` do devDependencies (pertencem ao projeto do usuário)
 
-## [2.0.0] - 2026-06-20
+## [0.0.2] - 2026-06-20
 
 ### Adicionado
 - Suporte a Anthropic Claude como provedor LLM alternativo
@@ -54,7 +54,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Flag `--model` agora suporta modelos de qualquer provedor
 - Saída CLI com formatação aprimorada (chalk, ora, tabelas)
 
-## [1.0.0] - 2026-05-01
+## [0.0.1] - 2026-05-01
 
 ### Adicionado
 - Pipeline de geração de testes unitários com LLM (OpenAI)

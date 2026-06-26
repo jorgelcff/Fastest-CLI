@@ -60,9 +60,9 @@ export function buildGenerateCommand(): Command {
 
   cmd
     .description('Generate Jest unit tests from a card description and a source file')
-    .requiredOption('--card <text>', 'Card description (feature or task being tested)')
-    .requiredOption('--file <path>', 'Path to the source file to generate tests for')
-    .option('--test-type <type>', 'Test type: unit | integration', 'unit')
+    .option('--card <text>', 'Card description (feature or task being tested)')
+    .option('--file <path>', 'Path to the source file to generate tests for')
+    .option('--test-type <type>', 'Test type: unit | integration | use-case', 'unit')
     .option('--context <paths...>', 'Additional files/folders to include as system context for generation')
     .option('--max-context-files <n>', 'Maximum number of context files to include', (v: string) => parseInt(v, 10), 20)
     .option('--max-context-chars <n>', 'Maximum characters per context file', (v: string) => parseInt(v, 10), 4000)
@@ -93,6 +93,68 @@ export function buildGenerateCommand(): Command {
       cache: boolean;
     }) => {
       console.log(HEADER);
+
+      if (!opts.card || !opts.file) {
+        const readline = await import('readline');
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const askQuestion = (q: string): Promise<string> =>
+          new Promise(resolve => rl.question(q, resolve));
+        const askChoice = (q: string, options: string[], defaultIdx = 0): Promise<string> =>
+          new Promise(resolve => {
+            console.log(q);
+            options.forEach((opt, i) => {
+              const marker = i === defaultIdx ? chalk.cyan('→') : ' ';
+              console.log(`  ${marker} ${i + 1}. ${opt}`);
+            });
+            rl.question(chalk.gray(`  Escolha [${defaultIdx + 1}]: `), (answer) => {
+              const idx = parseInt(answer, 10) - 1;
+              resolve(options[idx >= 0 && idx < options.length ? idx : defaultIdx]);
+            });
+          });
+
+        try {
+          if (!opts.file) {
+            const fileAnswer = await askQuestion(chalk.bold('📁 Arquivo fonte: '));
+            if (!fileAnswer.trim()) {
+              console.error(chalk.red('✖ Arquivo fonte é obrigatório.'));
+              process.exit(1);
+            }
+            opts.file = fileAnswer.trim();
+          }
+
+          if (!opts.card) {
+            const cardAnswer = await askQuestion(chalk.bold('📝 Descrição do card (requisito a testar): '));
+            if (!cardAnswer.trim()) {
+              console.error(chalk.red('✖ Descrição do card é obrigatória.'));
+              process.exit(1);
+            }
+            opts.card = cardAnswer.trim();
+          }
+
+          // Ask test type interactively
+          if (!process.argv.includes('--test-type')) {
+            const testTypeChoice = await askChoice(
+              chalk.bold('\n🧪 Tipo de teste:'),
+              ['Unitário (unit)', 'Integração (integration)', 'Caso de Uso (use-case)'],
+              0,
+            );
+            if (testTypeChoice.includes('integration')) opts.testType = 'integration';
+            else if (testTypeChoice.includes('use-case')) opts.testType = 'use-case';
+            else opts.testType = 'unit';
+          }
+
+          // Ask output directory
+          if (!process.argv.includes('--output')) {
+            const outputAnswer = await askQuestion(chalk.bold(`\n📂 Diretório de saída [${opts.output}]: `));
+            if (outputAnswer.trim()) opts.output = outputAnswer.trim();
+          }
+
+          console.log(''); // blank line before pipeline starts
+        } finally {
+          rl.close();
+        }
+      }
+
       const parsedTestType = parseTestType(opts.testType);
       const framework: TestFramework = opts.framework === 'vitest' ? 'vitest'
         : opts.framework === 'jest' ? 'jest'
@@ -119,7 +181,7 @@ export function buildGenerateCommand(): Command {
           console.log(chalk.bold('Configuração:'));
           console.log(`  ${chalk.cyan('Arquivo fonte  ')} ${opts.file} ${chalk.gray(`(${sourceLines} linhas)`)}`);
           console.log(`  ${chalk.cyan('Linguagem      ')} ${language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
-          console.log(`  ${chalk.cyan('Tipo de teste  ')} ${parsedTestType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
+          console.log(`  ${chalk.cyan('Tipo de teste  ')} ${parsedTestType === 'integration' ? chalk.magenta('Integração') : parsedTestType === 'use-case' ? chalk.blue('Caso de Uso') : chalk.green('Unitário')}`);
           console.log(`  ${chalk.cyan('Framework      ')} ${framework === 'vitest' ? chalk.magenta('Vitest') : chalk.green('Jest')}`);
           console.log(`  ${chalk.cyan('Card           ')} ${chalk.gray(`${opts.card.length} caracteres`)}`);
           console.log(`  ${chalk.cyan('Modelo         ')} ${modelName}`);
@@ -150,6 +212,8 @@ export function buildGenerateCommand(): Command {
             `Construir prompt LLM (${parsedTestType}) com card + código fonte`,
             parsedTestType === 'integration'
               ? 'Chamar LLM para gerar testes Jest + Supertest'
+              : parsedTestType === 'use-case'
+              ? 'Chamar LLM para gerar testes de caso de uso'
               : 'Chamar LLM para gerar testes Jest',
             'Salvar testes no diretório de saída',
             'Executar Jest com cobertura',
@@ -228,7 +292,7 @@ export function buildGenerateCommand(): Command {
       }
 
       console.log(`  ${chalk.cyan('Arquivo   ')} ${result.testFilePath}`);
-      console.log(`  ${chalk.cyan('Tipo      ')} ${result.testType === 'integration' ? chalk.magenta('Integração') : chalk.green('Unitário')}`);
+      console.log(`  ${chalk.cyan('Tipo      ')} ${result.testType === 'integration' ? chalk.magenta('Integração') : result.testType === 'use-case' ? chalk.blue('Caso de Uso') : chalk.green('Unitário')}`);
       console.log(`  ${chalk.cyan('Framework ')} ${result.framework === 'vitest' ? chalk.magenta('Vitest') : chalk.green('Jest')}`);
       console.log(`  ${chalk.cyan('Linguagem ')} ${result.language === 'typescript' ? chalk.blue('TypeScript') : chalk.yellow('JavaScript')}`);
       console.log(`  ${chalk.cyan('Testes    ')} ${chalk.bold(String(result.testCount))} caso(s) encontrado(s)`);
@@ -352,10 +416,10 @@ function hasContextGuardRailViolations(context: {
 
 function parseTestType(value: string): TestType {
   const normalized = (value || '').toLowerCase().trim();
-  if (normalized === 'integration' || normalized === 'unit') {
+  if (normalized === 'integration' || normalized === 'unit' || normalized === 'use-case') {
     return normalized;
   }
-  throw new Error(`Invalid --test-type "${value}". Use "unit" or "integration".`);
+  throw new Error(`Invalid --test-type "${value}". Use "unit", "integration" or "use-case".`);
 }
 
 function hasGenerationContextViolations(result: {

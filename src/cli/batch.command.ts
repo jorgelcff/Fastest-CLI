@@ -52,17 +52,17 @@ function walkDir(dir: string, files: string[], skipPatterns: RegExp, ignoreDirs:
 
 function parseTestType(value: string): TestType {
   const normalized = (value || '').toLowerCase().trim();
-  if (normalized === 'integration' || normalized === 'unit') return normalized;
-  throw new Error(`Invalid --test-type "${value}". Use "unit" or "integration".`);
+  if (normalized === 'integration' || normalized === 'unit' || normalized === 'use-case') return normalized;
+  throw new Error(`Invalid --test-type "${value}". Use "unit", "integration" or "use-case".`);
 }
 
 export function buildBatchCommand(): Command {
   const cmd = new Command('batch');
   cmd
     .description('Generate tests for multiple source files at once')
-    .requiredOption('--card <text>', 'Card description shared across all files')
-    .requiredOption('--files <patterns...>', 'Source file paths or directories')
-    .option('--test-type <type>', 'Test type: unit | integration', 'unit')
+    .option('--card <text>', 'Card description shared across all files')
+    .option('--files <patterns...>', 'Source file paths or directories')
+    .option('--test-type <type>', 'Test type: unit | integration | use-case', 'unit')
     .option('--output <dir>', 'Output directory for generated tests', 'tests')
     .option('--model <model>', 'LLM model to use')
     .option('--retries <n>', 'Retry attempts per file if tests fail validation', (v: string) => parseInt(v, 10), 0)
@@ -72,6 +72,67 @@ export function buildBatchCommand(): Command {
     .option('--cache', 'Cache LLM responses to avoid redundant API calls', false)
     .action(async (opts) => {
       console.log(chalk.bold.cyan('\n⚡ Fastest CLI') + chalk.gray(' — Batch Mode\n'));
+
+      if (!opts.card || !opts.files) {
+        const readline = await import('readline');
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const askQuestion = (q: string): Promise<string> =>
+          new Promise(resolve => rl.question(q, resolve));
+        const askChoice = (q: string, options: string[], defaultIdx = 0): Promise<string> =>
+          new Promise(resolve => {
+            console.log(q);
+            options.forEach((opt, i) => {
+              const marker = i === defaultIdx ? chalk.cyan('→') : ' ';
+              console.log(`  ${marker} ${i + 1}. ${opt}`);
+            });
+            rl.question(chalk.gray(`  Escolha [${defaultIdx + 1}]: `), (answer) => {
+              const idx = parseInt(answer, 10) - 1;
+              resolve(options[idx >= 0 && idx < options.length ? idx : defaultIdx]);
+            });
+          });
+
+        try {
+          if (!opts.files) {
+            const filesAnswer = await askQuestion(chalk.bold('📁 Arquivos/diretórios fonte (separados por espaço): '));
+            if (!filesAnswer.trim()) {
+              console.error(chalk.red('✖ Arquivos fonte são obrigatórios.'));
+              process.exit(1);
+            }
+            opts.files = filesAnswer.trim().split(/\s+/);
+          }
+
+          if (!opts.card) {
+            const cardAnswer = await askQuestion(chalk.bold('📝 Descrição do card (requisito a testar): '));
+            if (!cardAnswer.trim()) {
+              console.error(chalk.red('✖ Descrição do card é obrigatória.'));
+              process.exit(1);
+            }
+            opts.card = cardAnswer.trim();
+          }
+
+          // Ask test type interactively
+          if (!process.argv.includes('--test-type')) {
+            const testTypeChoice = await askChoice(
+              chalk.bold('\n🧪 Tipo de teste:'),
+              ['Unitário (unit)', 'Integração (integration)', 'Caso de Uso (use-case)'],
+              0,
+            );
+            if (testTypeChoice.includes('integration')) opts.testType = 'integration';
+            else if (testTypeChoice.includes('use-case')) opts.testType = 'use-case';
+            else opts.testType = 'unit';
+          }
+
+          // Ask output directory
+          if (!process.argv.includes('--output')) {
+            const outputAnswer = await askQuestion(chalk.bold(`\n📂 Diretório de saída [${opts.output}]: `));
+            if (outputAnswer.trim()) opts.output = outputAnswer.trim();
+          }
+
+          console.log(''); // blank line before pipeline starts
+        } finally {
+          rl.close();
+        }
+      }
 
       const parsedTestType = parseTestType(opts.testType);
       const framework: TestFramework = opts.framework === 'vitest' ? 'vitest'

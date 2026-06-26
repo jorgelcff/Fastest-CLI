@@ -1,6 +1,6 @@
 # 04. Ressonancia - Planejamento de Escalabilidade
 
-## Projeto: Fastest CLI v2.0.0
+## Projeto: Fastest CLI v0.0.2
 
 ---
 
@@ -12,7 +12,7 @@ Mapear os gargalos, limites e estrategias de escalabilidade do Fastest CLI para 
 
 ## 2. Volume Atual e Projetado
 
-### 2.1 Estado Atual (v2.0.0)
+### 2.1 Estado Atual (v0.0.2)
 
 | Dimensao | Estado Atual |
 |----------|-------------|
@@ -30,8 +30,8 @@ Mapear os gargalos, limites e estrategias de escalabilidade do Fastest CLI para 
 
 | Fase | Timeline | Volume Estimado |
 |------|----------|----------------|
-| Fase 1 (Atual) | v2.0.0 | 100-500 geracoes/dia (comunidade inicial) |
-| Fase 2 (Adocao) | v2.1-v2.5 | 1.000-5.000 geracoes/dia |
+| Fase 1 (Atual) | v0.0.2 | 100-500 geracoes/dia (comunidade inicial) |
+| Fase 2 (Adocao) | v0.1-v0.5 | 1.000-5.000 geracoes/dia |
 | Fase 3 (Escala) | v3.0+ | 10.000-50.000 geracoes/dia |
 | Fase 4 (Enterprise) | v4.0+ | 100.000+ geracoes/dia (integracoes CI/CD) |
 
@@ -72,7 +72,7 @@ Mapear os gargalos, limites e estrategias de escalabilidade do Fastest CLI para 
 
 ## 4. Estrategias de Escalabilidade
 
-### 4.1 Curto Prazo (v2.1-v2.5)
+### 4.1 Curto Prazo (v0.1-v0.5)
 
 #### Caching de Prompts e Respostas
 
@@ -268,5 +268,5 @@ Configuracao de alertas (quando telemetria implementada):
 ---
 
 *Documento parte da metodologia Sinfonia - Movimento 04: Ressonancia*
-*Projeto: Fastest CLI v2.0.0*
+*Projeto: Fastest CLI v0.0.2*
 *Ultima atualizacao: Junho 2026*

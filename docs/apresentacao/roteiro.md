@@ -14,7 +14,7 @@
 
 **Conteudo:**
 
-- **Fastest CLI v2.1.0**
+- **Fastest CLI v0.1.0**
 - Pipeline Inteligente de Geracao de Testes a partir de Requisitos em Linguagem Natural
 - Dominio SWEBOK: Software Testing (Capitulo 4)
 - Equipe: Jorge Freitas
@@ -23,7 +23,7 @@
 
 **Notas do apresentador:**
 
-Boa noite a todos. Hoje vou apresentar o Fastest CLI, uma ferramenta de linha de comando que usa inteligencia artificial para gerar testes automatizados a partir de requisitos escritos em linguagem natural. O projeto se insere no dominio de Software Testing do SWEBOK, especificamente no Capitulo 4, que trata de tecnicas, niveis e metricas de teste. A ferramenta esta na versao 2.1.0 e suporta tanto Jest quanto Vitest como frameworks de teste.
+Boa noite a todos. Hoje vou apresentar o Fastest CLI, uma ferramenta de linha de comando que usa inteligencia artificial para gerar testes automatizados a partir de requisitos escritos em linguagem natural. O projeto se insere no dominio de Software Testing do SWEBOK, especificamente no Capitulo 4, que trata de tecnicas, niveis e metricas de teste. A ferramenta esta na versao 0.1.0 e suporta tanto Jest quanto Vitest como frameworks de teste.
 
 **Tempo estimado:** 30 segundos
 
@@ -133,7 +133,7 @@ Nossa missao e democratizar a escrita de testes de qualidade. A visao e ambicios
          v
 +--------+----------+
 |   Fastest CLI     |
-|   v2.1.0          |
+|   v0.1.0          |
 +--------+----------+
          |
     +----+----+----+
@@ -307,81 +307,39 @@ Nosso canvas de experimento define uma hipotese clara e mensuravel. Definimos qu
 
 ---
 
-### Slide 10 — Demo ao Vivo: Titulo
+### Slide 10 — Demo ao Vivo
 
-**Titulo do Slide:** Demo ao Vivo — Fastest CLI em Acao
+**Titulo do Slide:** 🖥️ DEMO AO VIVO — Fastest CLI em Acao
 
 **Conteudo:**
 
-```bash
-$ fastest generate --source src/utils/validator.ts --framework jest
-```
+> **⏸️ PARAR A APRESENTACAO E IR PARA O TERMINAL**
 
 **O que sera demonstrado:**
-1. Geracao de teste a partir de codigo real
-2. Execucao do teste gerado
-3. Relatorio de cobertura
-4. Modo batch para multiplos arquivos
-5. Comando doctor para diagnostico
+1. `fastest doctor` — diagnostico do ambiente (15s)
+2. `fastest generate` — modo interativo sem flags (60s)
+3. `fastest generate --file ... --card ... --test-type use-case` — geracao com flags (60s)
+4. `fastest batch --card "..." --files src/utils/ --dry-run` — modo batch (30s)
+5. Execucao dos testes gerados com `npx jest` (30s)
 
-**Pre-requisitos da demo:**
-- Node.js 18+
-- API key configurada
-- Projeto TypeScript de exemplo
+**Destaques para mostrar:**
+- Modo interativo: CLI pergunta arquivo, card, tipo de teste
+- 3 tipos de teste: unitario, integracao, **caso de uso** (novo!)
+- Pipeline completo: geracao → validacao TypeScript → execucao → delta de cobertura
+- Tabela antes/depois com cores
 
-**Notas do apresentador:**
-
-Agora vamos ver o Fastest CLI funcionando na pratica. Vou demonstrar o fluxo completo: desde a geracao de um teste para um arquivo real ate a execucao e o relatorio de cobertura. Tambem vou mostrar o modo batch, que gera testes para multiplos arquivos de uma vez, e o comando doctor, que diagnostica problemas de configuracao. Vamos ao terminal.
-
-**Tempo estimado:** 30 segundos
-
----
-
-### Slide 11 — Fluxo da Demo (Passo a Passo)
-
-**Titulo do Slide:** Fluxo da Demo — Passo a Passo
-
-**Conteudo:**
-
-**Passo 1: Configuracao inicial**
-```bash
-$ fastest init
-$ fastest config --provider openai --model gpt-4o-mini
-```
-
-**Passo 2: Gerar teste unitario**
-```bash
-$ fastest generate --source src/services/cache.service.ts \
-    --framework jest --type unit
-```
-
-**Passo 3: Executar teste gerado**
-```bash
-$ npx jest tests/cache.service.test.ts
-```
-
-**Passo 4: Geracao em lote**
-```bash
-$ fastest batch --dir src/services --framework vitest
-```
-
-**Passo 5: Diagnostico**
-```bash
-$ fastest doctor
-# Verifica: Node version, API keys, dependencias, configuracao
-```
-
-**Passo 6: Modo dry-run (seguranca)**
-```bash
-$ fastest generate --source src/index.ts --dry-run
-# Mostra o que seria gerado sem chamar a API
-```
+**Pre-requisitos (preparar ANTES):**
+- Terminal aberto no diretorio do projeto
+- API key configurada (`fastest config list` para verificar)
+- Plano B: screenshots dos comandos em caso de falha de API
 
 **Notas do apresentador:**
 
-O fluxo comeca com o init, que cria a configuracao inicial. Depois configuramos o provedor — aqui estou usando OpenAI com gpt-4o-mini. No passo 2, gero um teste unitario para o cache service. Reparem que o teste gerado tem describe blocks, it blocks, mocks, e cobre edge cases. No passo 3, executo o teste e ele passa. O modo batch no passo 4 e poderoso — gera testes para todos os arquivos de um diretorio. O doctor no passo 5 verifica se tudo esta configurado corretamente. E o dry-run no passo 6 e uma feature de seguranca — mostra o que seria gerado sem fazer a chamada de API.
+Agora vou pausar os slides e demonstrar o Fastest CLI ao vivo no terminal. Primeiro, vou rodar o `fastest doctor` para mostrar que o ambiente esta configurado. Depois, vou usar o modo interativo — reparem que o CLI pergunta o arquivo, a descricao do card e o tipo de teste, incluindo o novo tipo "caso de uso" que testa fluxos de negocio completos. Em seguida, mostro a geracao com flags diretas e o modo batch para multiplos arquivos. Vamos ao terminal.
 
-**Tempo estimado:** 2 minutos (com demo ao vivo)
+> **Consultar `docs/apresentacao/demo-script.md` para o roteiro detalhado da demo com falas e plano B.**
+
+**Tempo estimado:** 3-4 minutos (demo ao vivo)
 
 ---
 
@@ -395,9 +353,9 @@ O fluxo comeca com o init, que cria a configuracao inicial. Depois configuramos 
 
 | Marco | Testes | Cobertura |
 |-------|--------|-----------|
-| v1.0 (baseline) | 154 | 81.68% |
-| v2.0 (refatoracao) | ~180 | ~88% |
-| v2.1.0 (atual) | 201 | 93%+ |
+| v0.0.1 (baseline) | 154 | 81.68% |
+| v0.0.2 (refatoracao) | ~180 | ~88% |
+| v0.1.0 (atual) | 201 | 93%+ |
 
 **Distribuicao por modulo:**
 
@@ -489,15 +447,15 @@ Seguranca foi uma preocupacao desde o dia um. O maior risco e enviar codigo-font
 
 ---
 
-### Slide 15 — Refatoracoes e Melhorias (v2.0 para v2.1)
+### Slide 15 — Refatoracoes e Melhorias (v0.0.2 para v0.1.0)
 
-**Titulo do Slide:** Evolucao: v2.0.0 para v2.1.0
+**Titulo do Slide:** Evolucao: v0.0.2 para v0.1.0
 
 **Conteudo:**
 
-**Principais melhorias na v2.1.0:**
+**Principais melhorias na v0.1.0:**
 
-| Feature | v2.0.0 | v2.1.0 |
+| Feature | v0.0.2 | v0.1.0 |
 |---------|--------|--------|
 | Providers | Apenas OpenAI | OpenAI + Anthropic |
 | Frameworks | Apenas Jest | Jest + Vitest |
@@ -517,7 +475,7 @@ Seguranca foi uma preocupacao desde o dia um. O maior risco e enviar codigo-font
 
 **Notas do apresentador:**
 
-A evolucao de v2.0 para v2.1 foi significativa. Saimos de um provedor unico para dois, de um framework para dois, e adicionamos features criticas como batch mode e retry com feedback. A cobertura saltou de 81 para 93 por cento. As refatoracoes tecnicas incluiram a implementacao do Factory Pattern para providers, melhor separacao de responsabilidades e validacao de input completa. Cada melhoria foi guiada por feedback real e pelos criterios do canvas de experimento.
+A evolucao de v0.0.2 para v0.1.0 foi significativa. Saimos de um provedor unico para dois, de um framework para dois, e adicionamos features criticas como batch mode e retry com feedback. A cobertura saltou de 81 para 93 por cento. As refatoracoes tecnicas incluiram a implementacao do Factory Pattern para providers, melhor separacao de responsabilidades e validacao de input completa. Cada melhoria foi guiada por feedback real e pelos criterios do canvas de experimento.
 
 **Tempo estimado:** 1 minuto
 
@@ -611,7 +569,7 @@ O feedback confirmou nossas hipoteses sobre as personas. Carlos, o desenvolvedor
 - Feedback positivo nas dimensoes de produtividade e qualidade
 
 **Proximos passos imediatos:**
-- Publicar v2.1.0 no npm
+- Publicar v0.1.0 no npm
 - Coletar metricas de uso real
 - Expandir base de usuarios beta
 
@@ -625,18 +583,18 @@ A decisao e clara: PERSEVERAR. Todos os criterios GO foram atendidos ou superado
 
 ### Slide 19 — Roadmap Futuro
 
-**Titulo do Slide:** Roadmap — v2.5 e v3.0
+**Titulo do Slide:** Roadmap — v0.5 e v1.0
 
 **Conteudo:**
 
-**v2.5 (proximo trimestre):**
+**v0.5 (proximo trimestre):**
 - Suporte a mais modelos (GPT-4o, Claude Sonnet)
 - Watch mode: gerar testes automaticamente ao salvar arquivo
 - Melhoria no retry: analise semantica de erros
 - Configuracao de prompts customizados pelo usuario
 - Relatorio HTML de cobertura integrado
 
-**v3.0 (6 meses):**
+**v1.0 (6 meses):**
 - Suporte a Python e Go
 - Plugin system para novos frameworks de teste
 - Integracao com VS Code e JetBrains
@@ -651,7 +609,7 @@ A decisao e clara: PERSEVERAR. Todos os criterios GO foram atendidos ou superado
 
 **Notas do apresentador:**
 
-O roadmap tem dois horizontes. Na v2.5, focamos em polimento: mais modelos, watch mode para produtividade, e prompts customizaveis. Na v3.0, a ambicao cresce: suporte a Python e Go, integracao com IDEs, e um sistema de plugins. A visao de longo prazo e transformar o Fastest CLI de uma ferramenta de geracao em um agente autonomo de qualidade — que sugere testes proativamente em pull requests e aprende com as correcoes dos desenvolvedores. O Factory Pattern que implementamos hoje e o alicerce dessa extensibilidade.
+O roadmap tem dois horizontes. Na v0.5, focamos em polimento: mais modelos, watch mode para produtividade, e prompts customizaveis. Na v1.0, a ambicao cresce: suporte a Python e Go, integracao com IDEs, e um sistema de plugins. A visao de longo prazo e transformar o Fastest CLI de uma ferramenta de geracao em um agente autonomo de qualidade — que sugere testes proativamente em pull requests e aprende com as correcoes dos desenvolvedores. O Factory Pattern que implementamos hoje e o alicerce dessa extensibilidade.
 
 **Tempo estimado:** 1 minuto 30 segundos
 

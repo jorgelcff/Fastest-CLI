@@ -4,7 +4,7 @@ import { LLMProvider } from '../providers/provider.interface';
 import { SourceLanguage, TestFramework } from '../utils/file.utils';
 import { CacheService } from './cache.service';
 
-export type TestType = 'unit' | 'integration';
+export type TestType = 'unit' | 'integration' | 'use-case';
 
 export interface LLMServiceOptions {
   apiKey?: string;
@@ -84,6 +84,31 @@ export class LLMService {
       ? 'Use Vitest como framework de teste. Importe { describe, it, expect, vi } de "vitest". Use vi.mock() para mocks.'
       : 'Use Jest como framework de teste. Use jest.mock() para mocks.';
 
+    if (testType === 'use-case') {
+      const mockRef = framework === 'vitest' ? 'vi.mock/vi.spyOn' : 'jest.mock/jest.spyOn';
+      const frameworkLabel = framework === 'vitest' ? 'Vitest' : 'Jest';
+      return `Você é um especialista em testes de casos de uso e fluxos de negócio completos.
+Gere testes de caso de uso em ${frameworkLabel} para o código abaixo.
+
+${frameworkInstructions}
+
+CARD (caso de uso / fluxo de negócio):
+${card}
+
+CÓDIGO:
+${code}
+
+Regras obrigatórias:
+- Gere testes que validem os fluxos de negócio completos descritos no card
+- Cubra o ciclo de vida completo do caso de uso (preparação → ação → verificação → limpeza)
+- Teste interações entre múltiplos componentes/serviços internos
+- Inclua fluxo de sucesso, fluxos de erro e edge cases da regra de negócio
+- Use mocks apenas para fronteiras externas (banco de dados, APIs externas) com ${mockRef}, não para serviços internos
+- Organize os testes por cenários de negócio com nomes descritivos
+
+${langInstructions}`;
+    }
+
     if (testType === 'integration') {
       const mockRef = framework === 'vitest' ? 'vi.mock/vi.spyOn' : 'jest.mock/jest.spyOn';
       const frameworkLabel = framework === 'vitest' ? 'Vitest' : 'Jest + Supertest';
@@ -145,7 +170,9 @@ ${langInstructions}`;
     testType: TestType = 'unit',
   ): string {
     const flowRequirement =
-      testType === 'integration'
+      testType === 'use-case'
+        ? '\nDestaque também cenários de negócio completos ainda não cobertos pelos testes.'
+        : testType === 'integration'
         ? '\nDestaque também fluxos críticos do caso de uso ainda não cobertos ponta a ponta.'
         : '';
 

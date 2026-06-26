@@ -1,6 +1,6 @@
 # 04. Ressonancia - Metricas de Impacto e Escala
 
-## Projeto: Fastest CLI v2.0.0
+## Projeto: Fastest CLI v0.0.2
 
 ---
 
@@ -251,5 +251,5 @@ Definir e monitorar as metricas essenciais para avaliar o impacto do Fastest CLI
 ---
 
 *Documento parte da metodologia Sinfonia - Movimento 04: Ressonancia*
-*Projeto: Fastest CLI v2.0.0*
+*Projeto: Fastest CLI v0.0.2*
 *Ultima atualizacao: Junho 2026*
