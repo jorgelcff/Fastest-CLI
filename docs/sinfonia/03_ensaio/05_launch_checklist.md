@@ -1,7 +1,7 @@
 # Launch Checklist - Fastest CLI
 
 ## Projeto
-**Fastest CLI v2.0.0** - Publicacao no npm como pacote publico `fastest-cli`.
+**Fastest CLI v0.0.2** - Publicacao no npm como pacote publico `fastest-cli`.
 
 ---
 
@@ -10,7 +10,7 @@
 | Campo | Valor |
 |-------|-------|
 | Pacote npm | `fastest-cli` |
-| Versao | 2.0.0 |
+| Versao | 0.0.2 |
 | Registro | npm public registry |
 | Comando de instalacao | `npm install -g fastest-cli` |
 | Binario | `fastest` |
@@ -31,7 +31,7 @@
 
 ### Configuracao do Pacote
 
-- [ ] `package.json` com versao `2.0.0`
+- [ ] `package.json` com versao `0.0.2`
 - [ ] Campo `bin` aponta para o entry point correto
 - [ ] Campo `files` inclui apenas arquivos necessarios (dist/, README)
 - [ ] Campo `engines` especifica versao minima do Node.js
@@ -69,7 +69,7 @@
 - [ ] README.md atualizado com instrucoes de instalacao via npm
 - [ ] README.md inclui exemplos de uso basicos
 - [ ] DEMO.md com demonstracao visual/passo-a-passo
-- [ ] CHANGELOG.md com mudancas da v2.0.0
+- [ ] CHANGELOG.md com mudancas da v0.0.2
 - [ ] Badges de npm no README (versao, downloads, licenca)
 
 ---
@@ -83,7 +83,7 @@
 git status  # sem alteracoes pendentes
 
 # 2. Atualizar versao
-npm version 2.0.0
+npm version 0.0.2
 
 # 3. Build final
 npm run build
@@ -108,8 +108,8 @@ fastest --version
 ### Tag Git
 
 ```bash
-git tag v2.0.0
-git push origin v2.0.0
+git tag v0.0.2
+git push origin v0.0.2
 ```
 
 ---
@@ -118,10 +118,10 @@ git push origin v2.0.0
 
 | Cenario | Acao | Comando |
 |---------|------|---------|
-| Bug critico nas primeiras 72h | Unpublish | `npm unpublish fastest-cli@2.0.0` |
-| Bug menor apos 72h | Deprecate + patch | `npm deprecate fastest-cli@2.0.0 "use 2.0.1"` |
+| Bug critico nas primeiras 72h | Unpublish | `npm unpublish fastest-cli@0.0.2` |
+| Bug menor apos 72h | Deprecate + patch | `npm deprecate fastest-cli@0.0.2 "use 0.0.3"` |
 | Problema de seguranca | Unpublish + patch imediato | `npm unpublish` + corrigir + `npm publish` |
-| Funcionalidade quebrada | Patch release | Corrigir, testar, publicar v2.0.1 |
+| Funcionalidade quebrada | Patch release | Corrigir, testar, publicar v0.0.3 |
 
 **Nota**: `npm unpublish` so e possivel nas primeiras 72 horas apos publicacao.
 
@@ -131,7 +131,7 @@ git push origin v2.0.0
 
 | Canal | Acao | Responsavel | Status |
 |-------|------|-------------|--------|
-| GitHub | Release notes com tag v2.0.0 | Mantenedor | [ ] |
+| GitHub | Release notes com tag v0.0.2 | Mantenedor | [ ] |
 | npm | Descricao e keywords atualizados | Mantenedor | [ ] |
 | README | Instrucoes de instalacao atualizadas | Mantenedor | [ ] |
 
@@ -150,7 +150,7 @@ git push origin v2.0.0
 
 - [ ] Coletar feedback de usuarios
 - [ ] Avaliar necessidade de patch releases
-- [ ] Planejar roadmap v2.1.0
+- [ ] Planejar roadmap v0.1.0
 
 ---
 

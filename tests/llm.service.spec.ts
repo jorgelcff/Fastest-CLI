@@ -80,6 +80,22 @@ describe('LLMService', () => {
       expect(prompt.toLowerCase()).toContain('jest.mock');
     });
 
+    it('builds use-case prompt with business flow instructions', () => {
+      const prompt = LLMService.buildTestPrompt('card', 'code', 'typescript', 'use-case');
+      expect(prompt).toContain('fluxos de negócio completos');
+      expect(prompt).toContain('ciclo de vida completo');
+      expect(prompt).toContain('cenários de negócio');
+      expect(prompt).toContain('fronteiras externas');
+      expect(prompt).toContain('jest.mock/jest.spyOn');
+    });
+
+    it('builds use-case prompt with vitest instructions', () => {
+      const prompt = LLMService.buildTestPrompt('card', 'code', 'typescript', 'use-case', 'vitest');
+      expect(prompt).toContain('Vitest');
+      expect(prompt).toContain('vi.mock/vi.spyOn');
+      expect(prompt).not.toContain('jest.mock');
+    });
+
     it('instance method delegates to static', () => {
       const svc = new LLMService({ apiKey: 'k' });
       expect(svc.buildTestPrompt('c', 'code')).toBe(LLMService.buildTestPrompt('c', 'code'));

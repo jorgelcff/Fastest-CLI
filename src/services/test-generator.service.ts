@@ -159,6 +159,7 @@ export class TestGeneratorService {
   private testSuffix(language: 'typescript' | 'javascript', testType: TestType): string {
     const base = testExtension(language); // .spec.ts | .spec.js
     if (testType === 'unit') return base;
+    if (testType === 'use-case') return base.replace('.spec.', '.usecase.spec.');
     return base.replace('.spec.', '.integration.spec.');
   }
 }

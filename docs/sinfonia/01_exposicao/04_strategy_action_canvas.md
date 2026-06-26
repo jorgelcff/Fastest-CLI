@@ -22,7 +22,7 @@ Acelerar a criacao de testes automatizados e melhorar a cobertura de codigo em p
 | Melhorar cobertura | Projetos usando Fastest atingem 80%+ de cobertura (baseline: projeto proprio em 81.68%) | Q3 2026 |
 | Adocao | 500+ instalacoes ativas do pacote `fastest-cli` no npm | Q4 2026 |
 | Qualidade | 90%+ dos testes gerados passam na validacao TypeScript na primeira geracao | Q3 2026 |
-| Multi-provider | Suporte estavel a OpenAI e Anthropic com parity de funcionalidades | Concluido (v2.0.0) |
+| Multi-provider | Suporte estavel a OpenAI e Anthropic com parity de funcionalidades | Concluido (v0.0.2) |
 
 ## KPIs
 
@@ -72,12 +72,12 @@ Acelerar a criacao de testes automatizados e melhorar a cobertura de codigo em p
 
 | Prioridade | Item | Justificativa | Status |
 |-----------|------|---------------|--------|
-| P0 | Pipeline basico: gerar → validar → executar → cobertura | Core value proposition | Concluido v2.0.0 |
-| P0 | Suporte multi-provider (OpenAI + Anthropic) | Flexibilidade e resiliencia | Concluido v2.0.0 |
-| P0 | Guard rails de contexto | Controle de custo e limite de tokens | Concluido v2.0.0 |
-| P1 | Comando `doctor` | Reducao de erros de configuracao | Concluido v2.0.0 |
-| P1 | Tabelas de cobertura delta | Visibilidade de impacto | Concluido v2.0.0 |
-| P1 | Configuracao persistente (`fastest config`) | Experiencia do usuario | Concluido v2.0.0 |
+| P0 | Pipeline basico: gerar → validar → executar → cobertura | Core value proposition | Concluido v0.0.2 |
+| P0 | Suporte multi-provider (OpenAI + Anthropic) | Flexibilidade e resiliencia | Concluido v0.0.2 |
+| P0 | Guard rails de contexto | Controle de custo e limite de tokens | Concluido v0.0.2 |
+| P1 | Comando `doctor` | Reducao de erros de configuracao | Concluido v0.0.2 |
+| P1 | Tabelas de cobertura delta | Visibilidade de impacto | Concluido v0.0.2 |
+| P1 | Configuracao persistente (`fastest config`) | Experiencia do usuario | Concluido v0.0.2 |
 | P2 | Integracao com GitHub Actions | Automacao em CI/CD | Planejado |
 | P2 | Suporte a Vitest alem de Jest | Ampliar base de usuarios | Planejado |
 | P2 | Modo batch (multiplos arquivos) | Produtividade em escala | Planejado |

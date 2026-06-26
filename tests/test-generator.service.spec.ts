@@ -162,6 +162,19 @@ describe('TestGeneratorService', () => {
     expect(llm.complete).toHaveBeenCalledTimes(1); // only initial call
   });
 
+  it('uses use-case naming when requested', async () => {
+    const llm = makeMockLLM('describe("use-case", () => { it("works", () => {}); });');
+    const svc = new TestGeneratorService(llm);
+    const result = await svc.generate({
+      card: 'c',
+      filePath: 'src/foo.ts',
+      outputDir: 'tests',
+      testType: 'use-case',
+    });
+    expect(result.testType).toBe('use-case');
+    expect(result.testFilePath).toBe(path.join('tests', 'foo.usecase.spec.ts'));
+  });
+
   it('uses integration naming when requested', async () => {
     const llm = makeMockLLM('describe("integration", () => { it("works", () => {}); });');
     const svc = new TestGeneratorService(llm);

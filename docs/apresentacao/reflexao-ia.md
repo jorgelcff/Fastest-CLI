@@ -2,7 +2,7 @@
 
 **Projeto:** Fastest CLI - Pipeline Inteligente de Geracao de Testes a partir de Cards
 **Data:** 25 de Junho de 2026
-**Versao:** 2.1.0
+**Versao:** 0.1.0
 
 ---
 

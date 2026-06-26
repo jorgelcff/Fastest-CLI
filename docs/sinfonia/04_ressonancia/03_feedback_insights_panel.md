@@ -1,12 +1,12 @@
 # 04. Ressonancia - Painel de Feedback e Insights
 
-## Projeto: Fastest CLI v2.0.0
+## Projeto: Fastest CLI v0.0.2
 
 ---
 
 ## 1. Objetivo do Ciclo
 
-Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Fastest CLI v2.0.0, identificando barreiras de adocao, prioridades de funcionalidades e oportunidades de melhoria para orientar o roadmap das proximas versoes.
+Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Fastest CLI v0.0.2, identificando barreiras de adocao, prioridades de funcionalidades e oportunidades de melhoria para orientar o roadmap das proximas versoes.
 
 ### Perguntas-Chave deste Ciclo
 
@@ -166,7 +166,7 @@ Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Faste
 
 ## 5. Acoes Recomendadas
 
-### 5.1 Prioridade Alta (v2.1)
+### 5.1 Prioridade Alta (v0.1)
 
 | Acao | Justificativa | Esforco | Impacto |
 |------|--------------|---------|---------|
@@ -175,7 +175,7 @@ Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Faste
 | Melhorar progress/feedback durante geracao | UX basica, reduz percepcao de lentidao | Baixo (1 sprint) | Medio |
 | Auto-executar `doctor` no primeiro uso | Reduz issues de configuracao em ~20% | Baixo (1 sprint) | Medio |
 
-### 5.2 Prioridade Media (v2.5)
+### 5.2 Prioridade Media (v0.5)
 
 | Acao | Justificativa | Esforco | Impacto |
 |------|--------------|---------|---------|
@@ -217,10 +217,10 @@ Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Faste
 
 | Ciclo | Data | Foco | Resultado Principal |
 |-------|------|------|-------------------|
-| Ciclo 1 (atual) | Junho 2026 | Lancamento v2.0.0 - barreiras de adocao | Retry loop + batch mode como prioridades |
+| Ciclo 1 (atual) | Junho 2026 | Lancamento v0.0.2 - barreiras de adocao | Retry loop + batch mode como prioridades |
 
 ---
 
 *Documento parte da metodologia Sinfonia - Movimento 04: Ressonancia*
-*Projeto: Fastest CLI v2.0.0*
+*Projeto: Fastest CLI v0.0.2*
 *Ultima atualizacao: Junho 2026*

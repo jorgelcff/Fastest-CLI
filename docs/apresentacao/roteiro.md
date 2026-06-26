@@ -14,7 +14,7 @@
 
 **Conteudo:**
 
-- **Fastest CLI v2.1.0**
+- **Fastest CLI v0.1.0**
 - Pipeline Inteligente de Geracao de Testes a partir de Requisitos em Linguagem Natural
 - Dominio SWEBOK: Software Testing (Capitulo 4)
 - Equipe: Jorge Freitas
@@ -23,7 +23,7 @@
 
 **Notas do apresentador:**
 
-Boa noite a todos. Hoje vou apresentar o Fastest CLI, uma ferramenta de linha de comando que usa inteligencia artificial para gerar testes automatizados a partir de requisitos escritos em linguagem natural. O projeto se insere no dominio de Software Testing do SWEBOK, especificamente no Capitulo 4, que trata de tecnicas, niveis e metricas de teste. A ferramenta esta na versao 2.1.0 e suporta tanto Jest quanto Vitest como frameworks de teste.
+Boa noite a todos. Hoje vou apresentar o Fastest CLI, uma ferramenta de linha de comando que usa inteligencia artificial para gerar testes automatizados a partir de requisitos escritos em linguagem natural. O projeto se insere no dominio de Software Testing do SWEBOK, especificamente no Capitulo 4, que trata de tecnicas, niveis e metricas de teste. A ferramenta esta na versao 0.1.0 e suporta tanto Jest quanto Vitest como frameworks de teste.
 
 **Tempo estimado:** 30 segundos
 
@@ -133,7 +133,7 @@ Nossa missao e democratizar a escrita de testes de qualidade. A visao e ambicios
          v
 +--------+----------+
 |   Fastest CLI     |
-|   v2.1.0          |
+|   v0.1.0          |
 +--------+----------+
          |
     +----+----+----+
@@ -395,9 +395,9 @@ O fluxo comeca com o init, que cria a configuracao inicial. Depois configuramos 
 
 | Marco | Testes | Cobertura |
 |-------|--------|-----------|
-| v1.0 (baseline) | 154 | 81.68% |
-| v2.0 (refatoracao) | ~180 | ~88% |
-| v2.1.0 (atual) | 201 | 93%+ |
+| v0.0.1 (baseline) | 154 | 81.68% |
+| v0.0.2 (refatoracao) | ~180 | ~88% |
+| v0.1.0 (atual) | 201 | 93%+ |
 
 **Distribuicao por modulo:**
 
@@ -489,15 +489,15 @@ Seguranca foi uma preocupacao desde o dia um. O maior risco e enviar codigo-font
 
 ---
 
-### Slide 15 — Refatoracoes e Melhorias (v2.0 para v2.1)
+### Slide 15 — Refatoracoes e Melhorias (v0.0.2 para v0.1.0)
 
-**Titulo do Slide:** Evolucao: v2.0.0 para v2.1.0
+**Titulo do Slide:** Evolucao: v0.0.2 para v0.1.0
 
 **Conteudo:**
 
-**Principais melhorias na v2.1.0:**
+**Principais melhorias na v0.1.0:**
 
-| Feature | v2.0.0 | v2.1.0 |
+| Feature | v0.0.2 | v0.1.0 |
 |---------|--------|--------|
 | Providers | Apenas OpenAI | OpenAI + Anthropic |
 | Frameworks | Apenas Jest | Jest + Vitest |
@@ -517,7 +517,7 @@ Seguranca foi uma preocupacao desde o dia um. O maior risco e enviar codigo-font
 
 **Notas do apresentador:**
 
-A evolucao de v2.0 para v2.1 foi significativa. Saimos de um provedor unico para dois, de um framework para dois, e adicionamos features criticas como batch mode e retry com feedback. A cobertura saltou de 81 para 93 por cento. As refatoracoes tecnicas incluiram a implementacao do Factory Pattern para providers, melhor separacao de responsabilidades e validacao de input completa. Cada melhoria foi guiada por feedback real e pelos criterios do canvas de experimento.
+A evolucao de v0.0.2 para v0.1.0 foi significativa. Saimos de um provedor unico para dois, de um framework para dois, e adicionamos features criticas como batch mode e retry com feedback. A cobertura saltou de 81 para 93 por cento. As refatoracoes tecnicas incluiram a implementacao do Factory Pattern para providers, melhor separacao de responsabilidades e validacao de input completa. Cada melhoria foi guiada por feedback real e pelos criterios do canvas de experimento.
 
 **Tempo estimado:** 1 minuto
 
@@ -611,7 +611,7 @@ O feedback confirmou nossas hipoteses sobre as personas. Carlos, o desenvolvedor
 - Feedback positivo nas dimensoes de produtividade e qualidade
 
 **Proximos passos imediatos:**
-- Publicar v2.1.0 no npm
+- Publicar v0.1.0 no npm
 - Coletar metricas de uso real
 - Expandir base de usuarios beta
 
@@ -625,18 +625,18 @@ A decisao e clara: PERSEVERAR. Todos os criterios GO foram atendidos ou superado
 
 ### Slide 19 — Roadmap Futuro
 
-**Titulo do Slide:** Roadmap — v2.5 e v3.0
+**Titulo do Slide:** Roadmap — v0.5 e v1.0
 
 **Conteudo:**
 
-**v2.5 (proximo trimestre):**
+**v0.5 (proximo trimestre):**
 - Suporte a mais modelos (GPT-4o, Claude Sonnet)
 - Watch mode: gerar testes automaticamente ao salvar arquivo
 - Melhoria no retry: analise semantica de erros
 - Configuracao de prompts customizados pelo usuario
 - Relatorio HTML de cobertura integrado
 
-**v3.0 (6 meses):**
+**v1.0 (6 meses):**
 - Suporte a Python e Go
 - Plugin system para novos frameworks de teste
 - Integracao com VS Code e JetBrains
@@ -651,7 +651,7 @@ A decisao e clara: PERSEVERAR. Todos os criterios GO foram atendidos ou superado
 
 **Notas do apresentador:**
 
-O roadmap tem dois horizontes. Na v2.5, focamos em polimento: mais modelos, watch mode para produtividade, e prompts customizaveis. Na v3.0, a ambicao cresce: suporte a Python e Go, integracao com IDEs, e um sistema de plugins. A visao de longo prazo e transformar o Fastest CLI de uma ferramenta de geracao em um agente autonomo de qualidade — que sugere testes proativamente em pull requests e aprende com as correcoes dos desenvolvedores. O Factory Pattern que implementamos hoje e o alicerce dessa extensibilidade.
+O roadmap tem dois horizontes. Na v0.5, focamos em polimento: mais modelos, watch mode para produtividade, e prompts customizaveis. Na v1.0, a ambicao cresce: suporte a Python e Go, integracao com IDEs, e um sistema de plugins. A visao de longo prazo e transformar o Fastest CLI de uma ferramenta de geracao em um agente autonomo de qualidade — que sugere testes proativamente em pull requests e aprende com as correcoes dos desenvolvedores. O Factory Pattern que implementamos hoje e o alicerce dessa extensibilidade.
 
 **Tempo estimado:** 1 minuto 30 segundos
 

@@ -5,7 +5,7 @@
 ---
 
 **Projeto:** Fastest CLI - Pipeline Inteligente de Geracao de Testes a partir de Cards
-**Versao:** 2.1.0
+**Versao:** 0.1.0
 **Data:** 25 de Junho de 2026
 **Equipe:** Equipe Fastest CLI
 **Repositorio:** Fastest-CLI
@@ -343,7 +343,7 @@ Acelerar a criacao de testes automatizados e melhorar a cobertura de codigo em p
 | Melhorar cobertura | Projetos usando Fastest atingem 80%+ de cobertura (baseline: projeto proprio em 81.68%) | Q3 2026 |
 | Adocao | 500+ instalacoes ativas do pacote `fastest-cli` no npm | Q4 2026 |
 | Qualidade | 90%+ dos testes gerados passam na validacao TypeScript na primeira geracao | Q3 2026 |
-| Multi-provider | Suporte estavel a OpenAI e Anthropic com parity de funcionalidades | Concluido (v2.0.0) |
+| Multi-provider | Suporte estavel a OpenAI e Anthropic com parity de funcionalidades | Concluido (v0.0.2) |
 
 #### KPIs
 
@@ -396,12 +396,12 @@ Acelerar a criacao de testes automatizados e melhorar a cobertura de codigo em p
 
 | Prioridade | Item | Justificativa | Status |
 |-----------|------|---------------|--------|
-| P0 | Pipeline basico: gerar -> validar -> executar -> cobertura | Core value proposition | Concluido v2.0.0 |
-| P0 | Suporte multi-provider (OpenAI + Anthropic) | Flexibilidade e resiliencia | Concluido v2.0.0 |
-| P0 | Guard rails de contexto | Controle de custo e limite de tokens | Concluido v2.0.0 |
-| P1 | Comando `doctor` | Reducao de erros de configuracao | Concluido v2.0.0 |
-| P1 | Tabelas de cobertura delta | Visibilidade de impacto | Concluido v2.0.0 |
-| P1 | Configuracao persistente (`fastest config`) | Experiencia do usuario | Concluido v2.0.0 |
+| P0 | Pipeline basico: gerar -> validar -> executar -> cobertura | Core value proposition | Concluido v0.0.2 |
+| P0 | Suporte multi-provider (OpenAI + Anthropic) | Flexibilidade e resiliencia | Concluido v0.0.2 |
+| P0 | Guard rails de contexto | Controle de custo e limite de tokens | Concluido v0.0.2 |
+| P1 | Comando `doctor` | Reducao de erros de configuracao | Concluido v0.0.2 |
+| P1 | Tabelas de cobertura delta | Visibilidade de impacto | Concluido v0.0.2 |
+| P1 | Configuracao persistente (`fastest config`) | Experiencia do usuario | Concluido v0.0.2 |
 | P2 | Integracao com GitHub Actions | Automacao em CI/CD | Planejado |
 | P2 | Suporte a Vitest alem de Jest | Ampliar base de usuarios | Planejado |
 | P2 | Modo batch (multiplos arquivos) | Produtividade em escala | Planejado |
@@ -1185,7 +1185,7 @@ Codigo Gerado pelo LLM
 | Campo | Valor |
 |-------|-------|
 | Pacote npm | `fastest-cli` |
-| Versao | 2.0.0 |
+| Versao | 0.0.2 |
 | Registro | npm public registry |
 | Comando de instalacao | `npm install -g fastest-cli` |
 | Binario | `fastest` |
@@ -1203,7 +1203,7 @@ Codigo Gerado pelo LLM
 
 **Configuracao do Pacote:**
 
-- [ ] `package.json` com versao `2.0.0`
+- [ ] `package.json` com versao `0.0.2`
 - [ ] Campo `bin` aponta para o entry point correto
 - [ ] Campo `files` inclui apenas arquivos necessarios (dist/, README)
 - [ ] Campo `engines` especifica versao minima do Node.js
@@ -1237,7 +1237,7 @@ Codigo Gerado pelo LLM
 git status
 
 # 2. Atualizar versao
-npm version 2.0.0
+npm version 0.0.2
 
 # 3. Build final
 npm run build
@@ -1263,10 +1263,10 @@ fastest --version
 
 | Cenario | Acao | Comando |
 |---------|------|---------|
-| Bug critico nas primeiras 72h | Unpublish | `npm unpublish fastest-cli@2.0.0` |
-| Bug menor apos 72h | Deprecate + patch | `npm deprecate fastest-cli@2.0.0 "use 2.0.1"` |
+| Bug critico nas primeiras 72h | Unpublish | `npm unpublish fastest-cli@0.0.2` |
+| Bug menor apos 72h | Deprecate + patch | `npm deprecate fastest-cli@0.0.2 "use 0.0.3"` |
 | Problema de seguranca | Unpublish + patch imediato | `npm unpublish` + corrigir + `npm publish` |
-| Funcionalidade quebrada | Patch release | Corrigir, testar, publicar v2.0.1 |
+| Funcionalidade quebrada | Patch release | Corrigir, testar, publicar v0.0.3 |
 
 #### Criterios Go / No-Go
 
@@ -1408,7 +1408,7 @@ fastest --version
 
 #### Volume Atual e Projetado
 
-**Estado Atual (v2.0.0):**
+**Estado Atual (v0.0.2):**
 
 | Dimensao | Estado Atual |
 |----------|-------------|
@@ -1426,8 +1426,8 @@ fastest --version
 
 | Fase | Timeline | Volume Estimado |
 |------|----------|----------------|
-| Fase 1 (Atual) | v2.0.0 | 100-500 geracoes/dia (comunidade inicial) |
-| Fase 2 (Adocao) | v2.1-v2.5 | 1.000-5.000 geracoes/dia |
+| Fase 1 (Atual) | v0.0.2 | 100-500 geracoes/dia (comunidade inicial) |
+| Fase 2 (Adocao) | v0.1-v0.5 | 1.000-5.000 geracoes/dia |
 | Fase 3 (Escala) | v3.0+ | 10.000-50.000 geracoes/dia |
 | Fase 4 (Enterprise) | v4.0+ | 100.000+ geracoes/dia (integracoes CI/CD) |
 
@@ -1454,7 +1454,7 @@ fastest --version
 
 #### Estrategias de Escalabilidade
 
-**Curto Prazo (v2.1-v2.5):**
+**Curto Prazo (v0.1-v0.5):**
 
 - **Caching de Prompts e Respostas:** Cache local baseado em hash SHA-256 do arquivo fonte + versao do prompt template. TTL configuravel (padrao: 24h). Economia estimada: 20-30% de chamadas evitadas.
 - **Otimizacao de Prompts:** Minificacao inteligente do codigo fonte, enviar apenas funcoes/classes exportadas relevantes. Economia estimada: 30-40% reducao de tokens.
@@ -1497,7 +1497,7 @@ fastest --version
 
 #### Objetivo do Ciclo
 
-Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Fastest CLI v2.0.0, identificando barreiras de adocao, prioridades de funcionalidades e oportunidades de melhoria.
+Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Fastest CLI v0.0.2, identificando barreiras de adocao, prioridades de funcionalidades e oportunidades de melhoria.
 
 **Perguntas-Chave:**
 1. Quais sao as principais barreiras para adocao do Fastest CLI?
@@ -1581,7 +1581,7 @@ Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Faste
 
 #### Acoes Recomendadas
 
-**Prioridade Alta (v2.1):**
+**Prioridade Alta (v0.1):**
 
 | Acao | Justificativa | Esforco | Impacto |
 |------|--------------|---------|---------|
@@ -1590,7 +1590,7 @@ Estruturar o ciclo de coleta, analise e acao sobre feedback de usuarios do Faste
 | Melhorar progress/feedback durante geracao | UX basica | Baixo (1 sprint) | Medio |
 | Auto-executar `doctor` no primeiro uso | Reduz issues de configuracao em ~20% | Baixo (1 sprint) | Medio |
 
-**Prioridade Media (v2.5):**
+**Prioridade Media (v0.5):**
 
 | Acao | Justificativa | Esforco | Impacto |
 |------|--------------|---------|---------|
