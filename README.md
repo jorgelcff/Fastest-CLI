@@ -4,22 +4,45 @@
 
 ---
 
+## Pré-requisitos
+
+Antes de instalar, confirme o ambiente abaixo — isso evita a maioria dos problemas de instalação:
+
+| Requisito | Versão | Como verificar | Onde obter |
+|---|---|---|---|
+| **Node.js** | >= 18 | `node --version` | [nodejs.org](https://nodejs.org) |
+| **npm** | >= 9 (vem com o Node) | `npm --version` | — |
+| **Git** | qualquer versão recente | `git --version` | [git-scm.com](https://git-scm.com) |
+| **Chave de API LLM** | OpenAI **ou** Anthropic, com créditos | — | [OpenAI](https://platform.openai.com/api-keys) · [Anthropic](https://console.anthropic.com/settings/keys) |
+
+> **Por que Git?** A instalação global é feita a partir do GitHub (`npm install -g github:...`) e o npm usa o Git para clonar o repositório. **Sem Git instalado, a instalação falha.**
+
+> **Windows:** se o PowerShell bloquear scripts, use `fastest.cmd` no lugar de `fastest` (ou ajuste a *Execution Policy*).
+
+**No projeto onde você vai gerar testes**, o `fastest doctor` espera encontrar: `package.json`, **Jest** ou **Vitest** configurado e, para TypeScript, um `tsconfig.json`.
+
+---
+
 ## Instalação rápida
 
 ```bash
-# Instalar globalmente (Node.js >= 18 necessário)
+# 1. Instalar globalmente (requer Node.js >= 18 e Git)
 npm install -g github:jorgelcff/Fastest-CLI
 
-# Configurar a chave OpenAI (uma vez)
-fastest config set-key
+# 2. Configurar provedor e chave (uma vez por máquina) — salva em ~/.fastest/config.json
+fastest init                                   # wizard interativo (recomendado)
+# ou, direto:
+fastest config set-key --provider openai       # OpenAI (padrão)
+fastest config set-key --provider anthropic    # Anthropic (Claude), opcional
 
-# Usar em qualquer projeto
+# 3. Validar e usar em qualquer projeto
+fastest doctor
 fastest generate --card="Descreva o que testar" --file="src/meu-arquivo.ts"
 ```
 
-Suporta **TypeScript** e **JavaScript** automaticamente — a linguagem é detectada pela extensão do arquivo.
+A chave fica salva globalmente em `~/.fastest/config.json` e vale para **todos** os projetos — não é preciso `.env` em cada um. Suporta **TypeScript** e **JavaScript** automaticamente (detecção pela extensão).
 
-→ [Instruções completas de instalação](#13-instalação-e-uso)
+→ [Instruções completas de instalação e configuração](#13-instalação-e-uso)
 
 ---
 
@@ -92,8 +115,8 @@ O fluxo atual suporta geração unitária e de integração orientada a casos de
 ## 8. Dependências Técnicas
 
 - Node.js >= 18
-- Jest + Istanbul (coverage)
-- API de LLM (OpenAI)
+- Jest (ou Vitest) + Istanbul (coverage)
+- API de LLM (OpenAI e/ou Anthropic)
 - chalk + ora (output visual)
 
 ## 9. Hipótese Principal
@@ -128,8 +151,7 @@ Testes gerados automaticamente a partir de cards são suficientes para melhorar 
 
 ### Pré-requisitos
 
-- Node.js >= 18 ([download](https://nodejs.org))
-- Uma conta na OpenAI com créditos de API ([criar conta](https://platform.openai.com))
+Veja a seção [Pré-requisitos](#pré-requisitos) no topo do README. Em resumo: **Node.js >= 18**, **Git** (para instalar via GitHub) e uma **chave de API** da OpenAI e/ou da Anthropic.
 
 ---
 
@@ -147,45 +169,57 @@ Ou, se publicado no npm:
 npm install -g fastest-cli
 ```
 
-Após instalar, o comando `fastest` fica disponível globalmente. Para usar em outro projeto:
+Após instalar, o comando `fastest` fica disponível globalmente.
+
+### Configuração (uma vez por máquina)
+
+A forma recomendada é salvar a chave no **config global** (`~/.fastest/config.json`), que vale para todos os projetos — não depende de `.env` em cada projeto:
 
 ```bash
-cd ~/meu-outro-projeto
+# Wizard interativo: escolhe o provedor, pede a chave e detecta o framework de teste
+fastest init
 
-# Defina a chave da OpenAI (escolha uma das formas abaixo)
-# Opção A — variável de ambiente global (persiste entre projetos)
-export OPENAI_API_KEY=sk-proj-...          # Linux/macOS
-$env:OPENAI_API_KEY="sk-proj-..."          # Windows PowerShell
-
-# Opção B — arquivo .env local no projeto (recomendado)
-echo "OPENAI_API_KEY=sk-proj-..." >> .env
-
-# Valide o ambiente
-fastest doctor
-
-# Gere testes
-fastest generate \
-  --card="Como QA, quero validar as regras de negócio do serviço de pedidos" \
-  --file="src/orders/order.service.ts" \
-  --output="tests"
+# Ou configurar manualmente:
+fastest config set-key --provider openai       # cola a chave OpenAI (sk-...)
+fastest config set-key --provider anthropic    # cola a chave Anthropic (opcional)
+fastest config set-model gpt-4o-mini           # modelo padrão (claude-* roteia p/ Anthropic)
+fastest config show                            # mostra provedores, modelo e chave ativa
+fastest config clear                           # remove toda a configuração salva
 ```
 
-> **Windows com PowerShell restritivo:** use `fastest.cmd` no lugar de `fastest`.
+> A chave é gravada em `~/.fastest/config.json` com permissão `600`.
 
 #### Onde a chave da API é lida
 
-O Fastest CLI procura `OPENAI_API_KEY` nesta ordem de prioridade:
+Para cada provedor, o Fastest CLI resolve a chave **nesta ordem de prioridade**:
 
-| Fonte | Como configurar |
-|---|---|
-| Variável de ambiente do shell | `export OPENAI_API_KEY=sk-...` no perfil do terminal |
-| Arquivo `.env` no diretório atual | Crie `.env` com `OPENAI_API_KEY=sk-...` no projeto alvo |
-| Opção `--model` não afeta a chave | A chave é sempre lida do ambiente |
+| Prioridade | Fonte | Como configurar |
+|---|---|---|
+| 1º | Variável de ambiente | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` no shell ou em um `.env` no projeto atual |
+| 2º | Config global | `fastest config set-key --provider <openai\|anthropic>` → `~/.fastest/config.json` |
+
+#### Multi-provider (OpenAI + Anthropic)
+
+O provedor é determinado pelo **nome do modelo**: modelos que começam com `claude` usam a **Anthropic**; qualquer outro usa a **OpenAI**.
+
+| Modelo (`--model` ou `config set-model`) | Provedor | Chave necessária |
+|---|---|---|
+| `gpt-4o-mini` (padrão), `gpt-4o`, `gpt-4`, … | OpenAI | `OPENAI_API_KEY` |
+| `claude-haiku-4-5-20251001`, `claude-*` | Anthropic | `ANTHROPIC_API_KEY` |
+
+```bash
+# Usar Claude em uma geração específica
+fastest generate --card="..." --file="src/foo.ts" --model="claude-haiku-4-5-20251001"
+
+# Ou tornar o Claude o padrão da máquina
+fastest config set-model claude-haiku-4-5-20251001
+fastest config set-key --provider anthropic
+```
 
 #### Verificando a instalação
 
 ```bash
-fastest --version    # deve exibir 1.0.0
+fastest --version    # exibe a versão atual (0.1.0)
 fastest --help       # lista todos os comandos
 fastest doctor       # valida o ambiente do projeto atual
 ```
@@ -431,10 +465,13 @@ node dist/index.js generate \
 | `--max-context-total-chars <n>` | ❌ | `30000` | Limite total de caracteres somando todos os contextos |
 | `--strict-context` | ❌ | `false` | Falha se houver truncamento/arquivos ignorados |
 | `--output <dir>` | ❌ | `tests` | Diretório de saída dos testes |
-| `--model <model>` | ❌ | `gpt-4o-mini` | Modelo OpenAI a utilizar |
+| `--model <model>` | ❌ | `gpt-4o-mini` | Modelo do LLM (modelos `claude-*` roteiam para a Anthropic) |
+| `--test-type <unit\|integration\|use-case>` | ❌ | `unit` | Tipo de teste: unitário, integração (Jest + Supertest) ou caso de uso |
+| `--framework <jest\|vitest\|auto>` | ❌ | `auto` | Framework de teste alvo (detecção automática por padrão) |
+| `--retries <n>` | ❌ | `0` | Re-tenta a geração reenviando erros de compilação/execução ao LLM |
+| `--cache` | ❌ | `false` | Reaproveita respostas do LLM em cache (evita chamadas redundantes) |
 | `--dry-run` | ❌ | `false` | Simula o pipeline sem chamadas externas (inclui prévia do prompt) |
 | `--suggest` | ❌ | `false` | Sugere testes adicionais com base na cobertura |
-| `--test-type <unit\|integration>` | ❌ | `unit` | Define se a geração será unitária ou de integração (Jest + Supertest) |
 
 ### Modo integração (casos de uso ponta a ponta)
 
@@ -453,6 +490,33 @@ No modo integração, o prompt orienta a IA a:
 - incluir falhas de comunicação/API;
 - produzir mocks determinísticos de dependências externas (`jest.mock`/`jest.spyOn`);
 - estruturar testes para execução com Jest + Supertest.
+
+### Geração em lote — comando `batch`
+
+Gera testes para vários arquivos de uma vez (caminhos ou pastas inteiras):
+
+```bash
+fastest batch \
+  --card="Testar as funções principais de cada serviço" \
+  --files src/services src/utils \
+  --test-type unit \
+  --framework auto \
+  --retries 1 \
+  --concurrency 3
+```
+
+| Opção | Padrão | Descrição |
+|---|---|---|
+| `--card <text>` | — | Card compartilhado por todos os arquivos |
+| `--files <patterns...>` | — | Arquivos ou pastas-fonte (aceita múltiplos) |
+| `--test-type <unit\|integration\|use-case>` | `unit` | Tipo de teste |
+| `--output <dir>` | `tests` | Diretório de saída |
+| `--model <model>` | `gpt-4o-mini` | Modelo do LLM (`claude-*` → Anthropic) |
+| `--framework <jest\|vitest\|auto>` | `auto` | Framework de teste |
+| `--retries <n>` | `0` | Re-tentativas por arquivo em caso de falha |
+| `--concurrency <n>` | `0` (sequencial) | Nº de arquivos processados em paralelo |
+| `--cache` | `false` | Usa cache de respostas do LLM |
+| `--dry-run` | `false` | Lista os arquivos correspondentes sem gerar testes |
 
 ---
 
@@ -485,7 +549,7 @@ fastest doctor \
 | Jest configurado | `jest.config.js` ou script `test` no package.json |
 | `tsconfig.json` presente | Projeto TypeScript detectado |
 | Node.js >= 18 | Versão mínima exigida |
-| `OPENAI_API_KEY` no ambiente | Chave da API disponível |
+| Chave de API disponível | `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` no ambiente **ou** em `~/.fastest/config.json` (conforme o provedor do modelo) |
 
 ---
 
@@ -531,26 +595,33 @@ Por padrão, os seguintes guard rails protegem o prompt enviado ao LLM:
 fastest-cli/
   src/
     cli/
-      generate.command.ts   # Comando generate com spinner e tabela de cobertura
-      doctor.command.ts     # Comando doctor com verificações coloridas
+      generate.command.ts        # Comando generate (pipeline completo)
+      batch.command.ts           # Geração em lote de múltiplos arquivos
+      doctor.command.ts          # Diagnóstico do ambiente
+      config.command.ts          # config set-key/show/set-model/clear/cache
+      init.command.ts            # Wizard de configuração interativo
+    providers/
+      provider.factory.ts        # Seleciona OpenAI/Anthropic pelo modelo
+      provider.interface.ts      # Interface LLMProvider
+      openai.provider.ts         # Provedor OpenAI
+      anthropic.provider.ts      # Provedor Anthropic
     services/
-      llm.service.ts        # Integração com OpenAI API
+      llm.service.ts             # Orquestra a chamada ao provedor LLM
       test-generator.service.ts  # Orquestração da geração de testes
-      coverage.service.ts   # Execução do Jest e leitura de cobertura
+      coverage.service.ts        # Execução do Jest e leitura de cobertura
+      cache.service.ts           # Cache local de respostas do LLM
+    config/
+      config.manager.ts          # Lê/grava ~/.fastest/config.json
     utils/
-      file.utils.ts         # I/O de arquivos e guard rails de contexto
-    index.ts                # Entry point da CLI
-  tests/
-    math.utils.spec.ts            # Testes do exemplo (gerados pela pipeline)
-    file.utils.spec.ts            # Testes unitários de file.utils
-    llm.service.spec.ts           # Testes unitários de llm.service
-    test-generator.service.spec.ts # Testes unitários de test-generator.service
-    coverage.service.spec.ts      # Testes unitários de coverage.service
+      file.utils.ts              # I/O de arquivos e guard rails de contexto
+      test-validation.utils.ts   # Validação dos testes gerados (tsc/Jest)
+    index.ts                     # Entry point da CLI
   example/
-    math.utils.ts           # Exemplo simples (funções matemáticas)
-    order.service.ts        # Exemplo avançado (lógica de negócio com OrderService)
-  docs/
-    AI_CONTEXT.md           # Contexto estruturado para assistentes de IA
+    math.utils.ts                # Exemplo simples (funções matemáticas)
+    order.service.ts             # Exemplo avançado (OrderService)
+  scripts/
+    setup.js                     # Setup guiado (npm run setup)
+  docs/                          # Documentação (Sinfonia, relatório, workflow)
   jest.config.js
   tsconfig.json
   .env.example
