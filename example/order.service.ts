@@ -28,6 +28,7 @@ export type Order = {
 
 export class OrderService {
   private orders: Map<string, Order> = new Map();
+  private orderCounter = 0;
 
   /**
    * Creates a new order from a list of cart items.
@@ -60,7 +61,7 @@ export class OrderService {
     const total = parseFloat((subtotal - discount).toFixed(2));
 
     const order: Order = {
-      id: `ORD-${Date.now()}`,
+      id: `ORD-${++this.orderCounter}`,
       items,
       discount,
       total,

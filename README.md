@@ -272,7 +272,7 @@ OPENAI_MODEL=gpt-4o-mini
 |---|---|---|
 | `✖ OpenAI API key is required` | Sem `.env` ou chave vazia | Execute `npm run setup` e preencha `OPENAI_API_KEY` |
 | `✖ File not found: ...` | Caminho do arquivo fonte errado | Verifique o `--file` passado |
-| `command not found: fastest` | Build não executado ou `npm link` não feito | Execute `npm run build` |
+| `command not found: fastest` | Build não executado ou `npm link` não feito | Execute `npm install && npm link` |
 | `Cannot find module 'dist/index.js'` | Build não executado | Execute `npm run build` primeiro |
 | Testes gerados não compilam | LLM gerou import incorreto | O serviço corrige o import automaticamente — reporte se persistir |
 

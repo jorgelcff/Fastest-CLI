@@ -149,7 +149,7 @@ describe('CoverageService', () => {
 
   describe('readCoverageForFile', () => {
     const FILE_SUMMARY = {
-      '/project/src/foo.ts': {
+      [path.resolve('/project/src/foo.ts')]: {
         statements: { pct: 80 },
         branches: { pct: 70 },
         functions: { pct: 90 },

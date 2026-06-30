@@ -8,7 +8,11 @@ Tempo estimado: **8–10 minutos**.
 ## Preparação (antes de apresentar)
 
 ```bash
-# No repositório do Fastest CLI
+# No repositório do Fastest CLI (primeira vez na máquina)
+npm install        # instala dependências e compila automaticamente
+npm link           # torna o comando `fastest` disponível globalmente
+
+# Se já instalou antes, apenas recompile
 npm run build
 
 # Confirme que a chave está configurada
@@ -60,8 +64,7 @@ Aponte na saída:
 ```bash
 fastest generate \
   --card="Como QA, quero validar as regras de negócio do OrderService: criação de pedido com validação de estoque e desconto, confirmação e cancelamento" \
-  --file="example/order.service.ts" \
-  --test-type integration
+  --file="example/order.service.ts"
 ```
 
 **O que mostrar enquanto roda:**
@@ -74,8 +77,8 @@ fastest generate \
 ```
 ✔ Baseline: 0% stmts · 0% branches · 0% funcs · 0% lines
 ✔ Testes gerados! (350 tokens · gpt-4o-mini)
-  Arquivo    tests/order.service.integration.spec.ts
-  Tipo       Integração
+  Arquivo    tests/order.service.spec.ts
+  Tipo       Unitário
   Linguagem  TypeScript
   Testes     18 caso(s) encontrado(s)
 ✔ TypeScript válido
@@ -145,7 +148,7 @@ Mostra que a abstração de provedores funciona sem mudar o restante do comando.
 npm test
 ```
 
-Aponte: **142 testes, 11 suites, 100% funcs cobertas**. Uma ferramenta de geração de testes que tem seus próprios testes.
+Aponte: **221 testes, 15 suites, todos passando**. Uma ferramenta de geração de testes que tem seus próprios testes.
 
 ---
 
