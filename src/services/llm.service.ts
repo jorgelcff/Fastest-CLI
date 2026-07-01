@@ -134,6 +134,7 @@ ${langInstructions}`;
     }
 
     const frameworkLabel = framework === 'vitest' ? 'Vitest' : 'Jest';
+    const mockFn = framework === 'vitest' ? 'vi.mock()' : 'jest.mock()';
     return `Você é um especialista em testes.
 Gere testes unitários usando ${frameworkLabel} para o seguinte código:
 
@@ -145,10 +146,13 @@ ${card}
 CÓDIGO:
 ${code}
 
-Inclua:
-- casos principais
-- edge cases
-- mocks se necessário
+Regras obrigatórias:
+- Inclua casos principais, edge cases e cenários de erro
+- NÃO adicione ${mockFn} para o arquivo sendo testado — você testa a implementação real
+- Use ${mockFn} apenas para dependências externas que o módulo importa (ex: banco de dados, HTTP, fs)
+- Todos os imports devem usar caminhos relativos corretos em relação ao arquivo de teste
+- Se o arquivo não possui dependências externas, não adicione nenhum mock
+- Calcule os valores esperados com base na lógica real do código antes de escrever os expects
 
 ${langInstructions}`;
   }

@@ -2,11 +2,12 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  maxWorkers: 2,
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.spec.ts', '**/*.integration.spec.ts', '**/*.spec.js', '**/*.integration.spec.js'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
   coverageThreshold: {
     global: {
       branches: 0,
