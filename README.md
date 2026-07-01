@@ -3,6 +3,10 @@
 > Pipeline Inteligente de Geração de Testes a partir de Cards
 
 ---
+## Demo Youtube
+[Clique aqui para assitir](https://youtu.be/6NkT2c_biRY)
+
+
 
 ## Pré-requisitos
 
