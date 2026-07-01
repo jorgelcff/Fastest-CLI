@@ -4,7 +4,7 @@
 **Semestre:** 2026.1  
 **Professor:** <PREENCHER>  
 **Projeto:** Fastest CLI -- Pipeline Inteligente de Geracao de Testes a partir de Cards  
-**Equipe:** <PREENCHER>  
+**Equipe:** Equipe 7  
 **Lider:** Jorge Freitas (jlcf)  
 **Repositorio:** https://github.com/jorgelcff/Fastest-CLI  
 **Data de entrega:** 29 de Junho de 2026
